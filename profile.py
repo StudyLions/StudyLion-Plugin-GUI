@@ -1,8 +1,5 @@
 from PIL import Image, ImageFont, ImageDraw
-
-
-def inter_font(name, **kwargs):
-    return ImageFont.truetype('assets/Inter/static/Inter-{}.ttf'.format(name), **kwargs)
+from .utils import asset_path, inter_font
 
 
 class ProfileCard:
@@ -10,7 +7,7 @@ class ProfileCard:
     scale = 2  # General size scale to match background resolution
 
     # Background images
-    bg_path = "assets/profile/background.png"
+    bg_path = asset_path("profile/background.png")
 
     # Inner container
     container_position = (70, 50)  # Position of top left corner
@@ -24,12 +21,12 @@ class ProfileCard:
     header_height = header_font.getsize("USERNAME #0000")[1]
 
     # Column 1
-    avatar_mask = Image.open('assets/profile/avatar_mask.png')
-    avatar_outline = Image.open('assets/profile/avatar_outline.png')
+    avatar_mask = Image.open(asset_path('profile/avatar_mask.png'))
+    avatar_outline = Image.open(asset_path('profile/avatar_outline.png'))
     avatar_size = avatar_outline.size
     avatar_gap = int(scale * 10)
 
-    coin_icon = Image.open('assets/profile/coin.png')
+    coin_icon = Image.open(asset_path('profile/coin.png'))
     coin_font = inter_font('Black', size=int(scale*14))
     coin_colour = '#DDB21D'
     coin_sep = int(scale * 5)
@@ -41,8 +38,8 @@ class ProfileCard:
     answers_gap = int(scale * 10)
     attendance_font = answers_font
     attendance_colour = answers_colour
-    attendance_icon_happy = Image.open('assets/profile/attendance_happy.png')
-    attendance_icon_sad = Image.open('assets/profile/attendance_sad.png')
+    attendance_icon_happy = Image.open(asset_path('profile/attendance_happy.png'))
+    attendance_icon_sad = Image.open(asset_path('profile/attendance_sad.png'))
     attendance_threshold = 0.8
 
     col1_size = (
@@ -69,8 +66,8 @@ class ProfileCard:
     col2_sep = int(scale * 40)  # Minimum separation between profile and achievements
 
     # Achievement section
-    achievement_active_path = 'assets/profile/achievements_active/'
-    achievement_inactive_path = 'assets/profile/achievements_inactive/'
+    achievement_active_path = asset_path('profile/achievements_active/')
+    achievement_inactive_path = asset_path('profile/achievements_inactive/')
     achievement_icon_size = (115, 96)  # Individual achievement box size
     achievement_gap = int(scale * 10)
     achievement_sep = int(scale * 0)
@@ -81,7 +78,7 @@ class ProfileCard:
     )
 
     # Profile section
-    badge_end_blob = Image.open('assets/profile/badge_end.png')
+    badge_end_blob = Image.open(asset_path('profile/badge_end.png'))
     badge_font = inter_font('Black', size=int(scale*13))
     badge_text_colour = '#FFFFFF'
     badge_blob_colour = '#1473A2'
@@ -101,8 +98,8 @@ class ProfileCard:
     rank_hours_colour = '#FFFFFF'
 
     bar_gap = int(scale*5)
-    bar_full = Image.open('assets/profile/progress_full.png')
-    bar_empty = Image.open('assets/profile/progress_empty.png')
+    bar_full = Image.open(asset_path('profile/progress_full.png'))
+    bar_empty = Image.open(asset_path('profile/progress_empty.png'))
 
     next_rank_font = inter_font('Italic', size=int(scale*15))
     next_rank_colour = '#FFFFFF'

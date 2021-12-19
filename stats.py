@@ -1,10 +1,8 @@
 import itertools
 from datetime import datetime, timedelta
-from PIL import Image, ImageFont, ImageDraw
+from PIL import Image, ImageDraw
 
-
-def inter_font(name, **kwargs):
-    return ImageFont.truetype('assets/Inter/static/Inter-{}.ttf'.format(name), **kwargs)
+from .utils import asset_path, inter_font
 
 
 def format_lb(pos):
@@ -31,8 +29,8 @@ class StatsCard:
     scale = 2  # General size scale to match background resolution
 
     # Background images
-    bg_path = "assets/stats/5_row_bg.png"
-    alt_bg_path = "assets/stats/6_row_bg.png"
+    bg_path = asset_path("stats/5_row_bg.png")
+    alt_bg_path = asset_path("stats/6_row_bg.png")
 
     # Inner container
     container_position = (60, 50)  # Position of top left corner
@@ -89,8 +87,8 @@ class StatsCard:
     cal_number_colour = '#BABABA'
     cal_number_gap = int(20*scale)
     cal_number_size = cal_number_font.getsize('88')
-    cal_streak_end = Image.open('assets/stats/streak_endpoint.png').convert("RGBA")
-    cal_streak_middle = Image.open('assets/stats/streak_middle.png').convert("RGBA")
+    cal_streak_end = Image.open(asset_path('stats/streak_endpoint.png')).convert("RGBA")
+    cal_streak_middle = Image.open(asset_path('stats/streak_middle.png')).convert("RGBA")
     cal_streak_middle_colour = '#1B3343'
 
     cal_size = (
