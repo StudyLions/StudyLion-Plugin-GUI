@@ -145,7 +145,7 @@ async def cmd_stats(ctx):
             continue
 
         if streak_end:
-            streaks.append((streak_end - streak, streak_end))
+            streaks.append((streak_end - streak + 1, streak_end))
             streak_end = None
         streak = 0
         if date.month != day_start.month:
