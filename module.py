@@ -144,17 +144,17 @@ async def cmd_stats(ctx):
 
             continue
 
-        streak = 0
         if streak_end:
             streaks.append((streak_end - streak, streak_end))
             streak_end = None
+        streak = 0
         if date.month != day_start.month:
             break
 
     # Handle loop exit state, i.e. the last streak
     if day_attended:
         streak += 1
-        streaks.append((streak_end - streak, streak_end))
+        streaks.append((streak_end - streak + 1, streak_end))
 
     # We have all the data
     stats_image = StatsCard(
