@@ -250,6 +250,8 @@ async def cmd_profile(ctx):
             next_badge.required_time // 3600,
             next_next_badge.required_time // 3600 if next_next_badge else None
         )
+    else:
+        next_rank = None
 
     # We have all the data
     with io.BytesIO() as avatar_data:
