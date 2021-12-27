@@ -300,7 +300,7 @@ class LeaderboardPage:
         ypos = image.height // 2
 
         # Mask the avatar, if it exists
-        avatar = entry.image
+        avatar = entry.image.copy()
         avatar.thumbnail((187, 187))
         avatar.paste((0, 0, 0, 0), mask=self.entry_mask)
 
