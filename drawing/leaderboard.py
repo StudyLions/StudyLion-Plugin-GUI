@@ -11,6 +11,7 @@ class LeaderboardEntry:
         self.member = member
 
         self.name = member.display_name if member else str(name)
+        self.name = ''.join(i if ord(i) < 128 or i == '∞' else '*' for i in self.name)
 
         self.image = None
 
