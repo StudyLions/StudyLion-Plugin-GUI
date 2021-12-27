@@ -2,7 +2,7 @@ import itertools
 from datetime import datetime, timedelta
 from PIL import Image, ImageDraw
 
-from .utils import asset_path, inter_font
+from ..utils import asset_path, inter_font
 
 
 def format_lb(pos):

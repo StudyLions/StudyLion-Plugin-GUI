@@ -1,7 +1,7 @@
 import io
 from PIL import Image, ImageDraw
 
-from utils import asset_path, inter_font
+from ..utils import asset_path, inter_font
 
 
 class LeaderboardEntry:

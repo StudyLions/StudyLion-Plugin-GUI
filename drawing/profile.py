@@ -1,5 +1,5 @@
 from PIL import Image, ImageFont, ImageDraw
-from .utils import asset_path, inter_font
+from ..utils import asset_path, inter_font
 
 
 class ProfileCard:
