@@ -124,7 +124,7 @@ class ProfileCard:
         self.data_name = name
         self.data_discrim = discrim
 
-        self.data_avatar = Image.open(avatar).convert('RGBA')
+        self.data_avatar = avatar
 
         self.data_coins = coins
         self.data_time = time

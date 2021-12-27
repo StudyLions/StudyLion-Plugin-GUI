@@ -11,6 +11,7 @@ from core import Lion
 from modules.study.tracking.data import session_history
 
 from ..drawing import StatsCard, ProfileCard
+from ..utils import get_avatar, image_as_file
 
 from ..module import module
 
@@ -18,7 +19,8 @@ from ..module import module
 @module.cmd(
     "stats",
     group="Statistics",
-    desc="View your server study statistics!",
+    desc="View your personal profile and study statistics!",
+    aliases=('profile',)
 )
 @in_guild()
 async def cmd_stats(ctx):
@@ -27,7 +29,7 @@ async def cmd_stats(ctx):
         {prefix}stats
         {prefix}stats <mention>
     Description:
-        View the local server study statistics for yourself or the mentioned user.
+        View your study profile, or that of the mentioned user.
     """
     # Identify the target
     if ctx.args:
@@ -152,49 +154,13 @@ async def cmd_stats(ctx):
         streak += 1
         streaks.append((streak_end - streak + 1, streak_end))
 
-    # We have all the data
+    # We have all the data for the stats card
     stats_image = StatsCard(
         (time_rank, coin_rank),
         list(reversed(study_times)),
         workout_total,
         streaks,
     ).draw()
-
-    with io.BytesIO() as image_data:
-        stats_image.save(image_data, format='PNG')
-        image_data.seek(0)
-
-        card_file = discord.File(image_data, filename='stats_{}.png'.format(target.id))
-        await ctx.reply(file=card_file)
-
-
-@module.cmd(
-    "profile",
-    group="Statistics",
-    desc="View your StudyLion profile!",
-)
-@in_guild()
-async def cmd_profile(ctx):
-    """
-    Usage``:
-        {prefix}profile
-        {prefix}profile <mention>
-    Description:
-        View your profile, or that of the mentioned user.
-    """
-    # Identify the target
-    if ctx.args:
-        if not ctx.msg.mentions:
-            return await ctx.error_reply("Please mention a user to view their statistics!")
-        target = ctx.msg.mentions[0]
-    else:
-        target = ctx.author
-
-    # System sync
-    Lion.sync()
-
-    # Fetch the required data
-    lion = Lion.fetch(ctx.guild.id, target.id)
 
     # Current economy balance (accounting for current session)
     coins = lion.coins
@@ -249,25 +215,21 @@ async def cmd_profile(ctx):
     else:
         next_rank = None
 
-    # We have all the data
-    with io.BytesIO() as avatar_data:
-        await target.avatar_url_as(format='png', size=256).save(avatar_data)
+    # We have all the data for the profile card
+    avatar = await get_avatar(target, size=256)
+    profile_image = ProfileCard(
+        target.name,
+        '#{}'.format(target.discriminator),
+        avatar,
+        coins,
+        season_time,
+        answers=None,
+        attendance=acc_rate,
+        current_rank=current_rank,
+        next_rank=next_rank
+    ).draw()
 
-        profile_image = ProfileCard(
-            target.name,
-            '#{}'.format(target.discriminator),
-            avatar_data,
-            coins,
-            season_time,
-            answers=None,
-            attendance=acc_rate,
-            current_rank=current_rank,
-            next_rank=next_rank
-        ).draw()
+    profile_file = image_as_file(profile_image, f"profile_{target.id}.png")
+    stats_file = image_as_file(stats_image, f"stats_{target.id}.png")
 
-        with io.BytesIO() as image_data:
-            profile_image.save(image_data, format='PNG')
-            image_data.seek(0)
-
-            card_file = discord.File(image_data, filename='profile.png')
-            await ctx.reply(file=card_file)
+    await ctx.reply(files=[profile_file, stats_file])
