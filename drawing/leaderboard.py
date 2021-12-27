@@ -1,28 +1,22 @@
 import io
 from PIL import Image, ImageDraw
 
-from ..utils import asset_path, inter_font
+from ..utils import asset_path, inter_font, get_avatar
 
 
 class LeaderboardEntry:
     def __init__(self, position, time, member=None, name=None):
         self.position = position
         self.time = time
+        self.member = member
 
-        if member:
-            self.name = member.name
-            self.avatar_url = member.avatar_url_as(format='png', size=512 if position in (1, 2, 3) else 64)
-        else:
-            self.name = str(name)
-            self.avatar_url = None
+        self.name = member.display_name if member else str(name)
 
         self.image = None
 
     async def save_image(self):
-        if self.avatar_url:
-            with io.BytesIO() as avatar_data:
-                await self.avatar_url.save(avatar_data)
-                self.image = Image.open(avatar_data).convert('RGBA')
+        if not self.image:
+            self.image = await get_avatar(self.member, size=512 if self.position in (1, 2, 3) else 256)
 
 
 class LeaderboardPage:
@@ -91,11 +85,14 @@ class LeaderboardPage:
         self.highlight = highlight
         self.first_page = any(entry.position in (1, 2, 3) for entry in entries)
 
+        self.image = None
+
     def draw(self) -> Image:
         if self.first_page:
-            return self._draw_first_page()
+            self.image = self._draw_first_page()
         else:
-            return self._draw_other_page()
+            self.image = self._draw_other_page()
+        return self.image
 
     def _draw_first_page(self) -> Image:
         # Collect background
@@ -208,7 +205,7 @@ class LeaderboardPage:
             text_x = third_x + (third.width // 2)
             draw.text(
                 (text_x, text_y),
-                '3ND',
+                '3RD',
                 font=self.top_name_font,
                 fill=self.top_name_colour,
                 anchor='mt'
