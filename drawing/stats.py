@@ -280,7 +280,7 @@ class StatsCard:
             (0, position),
             workout_text,
             font=self.stats_subheader_font,
-            fill=self.stats_subheader_colour,
+            fill=self.stats_subheader_colour if self.data_workouts else self.stats_text_colour,
             anchor='lm'
         )
         xposition = self.stats_subheader_font.getlength(workout_text)
@@ -288,7 +288,7 @@ class StatsCard:
             (xposition, position),
             str(self.data_workouts),
             font=self.stats_text_font,
-            fill=self.stats_subheader_colour,
+            fill=self.stats_subheader_colour if self.data_workouts else self.stats_text_colour,
             anchor='lm'
         )
 
