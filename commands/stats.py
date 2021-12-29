@@ -226,7 +226,8 @@ async def cmd_stats(ctx):
         answers=None,
         attendance=acc_rate,
         current_rank=current_rank,
-        next_rank=next_rank
+        next_rank=next_rank,
+        badges=ctx.client.data.profile_tags.queries.get_tags_for(ctx.guild.id, target.id)
     ).draw()
 
     profile_file = image_as_file(profile_image, f"profile_{target.id}.png")

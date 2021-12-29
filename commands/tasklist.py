@@ -1,4 +1,5 @@
 from core import Lion
+from data import tables
 
 from modules.todo.Tasklist import Tasklist as TextTasklist
 
@@ -20,7 +21,7 @@ class GUITasklist(TextTasklist):
             avatar,
             tasks,
             date,
-            badges=()
+            badges=tables.profile_tags.queries.get_tags_for(self.member.guild.id, self.member.id)
         ).draw()
 
         return self.pages
