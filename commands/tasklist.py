@@ -7,21 +7,9 @@ from ..utils import get_avatar, image_as_file, edit_files
 
 
 class GUITasklist(TextTasklist):
-    next_emoji = TextTasklist.next_emoji
-    prev_emoji = TextTasklist.prev_emoji
-    cancel_emoji = TextTasklist.cancel_emoji
-    refresh_emoji = TextTasklist.refresh_emoji
-
-    paged_reaction_order = (
-        prev_emoji, cancel_emoji, refresh_emoji, next_emoji
-    )
-    non_paged_reaction_order = (
-        cancel_emoji, refresh_emoji
-    )
-
     async def _format_tasklist(self):
         tasks = [
-            (i, task.content, task.complete)
+            (i, task.content, bool(task.completed_at))
             for (i, task) in enumerate(self.tasklist)
         ]
         avatar = await get_avatar(self.member, size=256)
