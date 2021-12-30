@@ -12,7 +12,7 @@ from utils.interactive import discord_shield
 from ..drawing import LeaderboardEntry, LeaderboardPage
 from ..utils import image_as_file, edit_files
 
-from ..module import module
+from ..module import module, ratelimit
 
 
 next_emoji = "▶"
@@ -27,6 +27,7 @@ prev_emoji = "◀"
     aliases=('ttop', 'toptime', 'top100')
 )
 @in_guild()
+@ratelimit.ward(member=False)
 async def cmd_top(ctx):
     """
     Usage``:

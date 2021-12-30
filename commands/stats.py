@@ -13,7 +13,7 @@ from modules.study.tracking.data import session_history
 from ..drawing import StatsCard, ProfileCard
 from ..utils import get_avatar, image_as_file
 
-from ..module import module
+from ..module import module, ratelimit
 
 
 @module.cmd(
@@ -23,6 +23,7 @@ from ..module import module
     aliases=('profile',)
 )
 @in_guild()
+@ratelimit.ward(member=False)
 async def cmd_stats(ctx):
     """
     Usage``:

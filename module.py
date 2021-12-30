@@ -1,6 +1,7 @@
 from LionModule import LionModule
 
 from meta import client
+from utils.ratelimits import RateLimit
 
 
 class PluginModule(LionModule):
@@ -15,3 +16,5 @@ class PluginModule(LionModule):
 
 
 module = PluginModule("GUI")
+
+ratelimit = RateLimit(5, 30)
