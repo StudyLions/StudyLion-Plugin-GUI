@@ -24,8 +24,7 @@ prev_emoji = "◀"
     "top",
     desc="View the Study Time leaderboard.",
     group="Statistics",
-    aliases=('ttop', 'toptime', 'top100'),
-    help_aliases={'top100': "View the Study Time top 100."}
+    aliases=('ttop', 'toptime', 'top100')
 )
 @in_guild()
 async def cmd_top(ctx):
