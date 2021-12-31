@@ -55,7 +55,7 @@ async def _get_weekly_goals(ctx):
         acc_total = len(accountability)
         acc_rate = acc_attended / acc_total
     else:
-        acc_rate = 1
+        acc_rate = None
 
     goalpage = GoalPage(
         name=ctx.author.name,
@@ -171,7 +171,7 @@ async def show_monthly_goals(ctx):
         acc_total = len(accountability)
         acc_rate = acc_attended / acc_total
     else:
-        acc_rate = 1
+        acc_rate = None
 
     goalpage = GoalPage(
         name=ctx.author.name,

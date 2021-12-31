@@ -48,8 +48,8 @@ class GoalPage:
     progress_mask = ImageOps.invert(progress_bg.split()[-1].convert('L'))
     progress_end = Image.open(asset_path('goals/progress_end.png'))
 
-    line_gap = int(scale * 10)
-    progress_text_at = progress_bg.height // 4
+    line_gap = int(scale * 5)
+    progress_text_at = 7 * (progress_bg.height // 10)
 
     task_count_font = inter_font('Bold', size=int(scale*76))
     task_count_colour = '#DDB21D'
@@ -66,16 +66,32 @@ class GoalPage:
         + 3 * line_gap,
         task_done_font.getsize("TASKS DONE")[1]
     )
+    task_progress_text_height = (
+        task_count_font.getsize('100')[1] +
+        task_done_font.getsize('TASKS DONE')[1] +
+        task_goal_font.getsize('GOAL')[1] +
+        2 * line_gap
+    )
 
     attendance_rate_font = inter_font('Bold', size=int(scale*76))
     attendance_rate_colour = '#DDB21D'
     attendance_font = inter_font('Bold', size=int(scale*37))
     attendance_colour = '#FFFFFF'
+    attendance_text_height = (
+        attendance_rate_font.getsize('100%')[1] +
+        attendance_font.getsize('ATTENDANCE')[1] * 2 +
+        2 * line_gap
+    )
 
     studied_text_font = inter_font('Bold', size=int(scale*37))
     studied_text_colour = '#FFFFFF'
-    studied_hour_font = inter_font('Bold', size=int(scale*55))
+    studied_hour_font = inter_font('Bold', size=int(scale*60))
     studied_hour_colour = '#DDB21D'
+    studied_text_height = (
+        studied_text_font.getsize('STUDIED')[1] * 2
+        + studied_hour_font.getsize('400')[1]
+        + 2 * line_gap
+    )
 
     progress_gap = int(scale * 50)
 
@@ -308,7 +324,7 @@ class GoalPage:
         draw = ImageDraw.Draw(progress_image)
 
         # Draw text into the bar
-        ypos = self.progress_text_at
+        ypos = self.progress_text_at - self.task_progress_text_height
         xpos = progress_image.width // 2
 
         text = str(self.data_tasks_done)
@@ -360,7 +376,7 @@ class GoalPage:
         progress_image = self._draw_progress_bar(amount)
         draw = ImageDraw.Draw(progress_image)
 
-        ypos = self.progress_text_at
+        ypos = self.progress_text_at - self.studied_text_height
         xpos = progress_image.width // 2
 
         text = "STUDIED"
@@ -397,15 +413,18 @@ class GoalPage:
         return progress_image
 
     def _draw_attendance(self):
-        amount = self.data_attendance
+        amount = self.data_attendance or 0
 
         progress_image = self._draw_progress_bar(amount)
         draw = ImageDraw.Draw(progress_image)
 
-        ypos = self.progress_text_at
+        ypos = self.progress_text_at - self.attendance_text_height
         xpos = progress_image.width // 2
 
-        text = f"{int(self.data_attendance * 100)}%"
+        if self.data_attendance is not None:
+            text = f"{int(self.data_attendance * 100)}%"
+        else:
+            text = "N/A"
         draw.text(
             (xpos, ypos),
             text,
