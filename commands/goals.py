@@ -5,13 +5,14 @@ from data.conditions import GEQ
 
 from modules.stats import goals
 
-from ..module import module
+from ..module import module, ratelimit
 
 from ..drawing.goals import GoalPage
+from ..drawing.weekly import WeeklyStatsPage
 from ..utils import get_avatar, image_as_file
 
 
-async def show_weekly_goals(ctx):
+async def _get_weekly_goals(ctx):
     # Fetch goal data
     goal_row = ctx.client.data.weekly_goals.fetch_or_create(
         (ctx.guild.id, ctx.author.id, ctx.alion.week_timestamp)
@@ -71,9 +72,13 @@ async def show_weekly_goals(ctx):
         month=False
     )
 
-    image = goalpage.draw()
-    await ctx.reply(file=image_as_file(image, 'weekly_stats_1.png'))
+    return goalpage.draw()
 
+
+@ratelimit.ward()
+async def show_weekly_goals(ctx):
+    image = await _get_weekly_goals(ctx)
+    await ctx.reply(file=image_as_file(image, 'weekly_stats_1.png'))
 
 goals.display_weekly_goals_for = show_weekly_goals
 
@@ -83,6 +88,7 @@ goals.display_weekly_goals_for = show_weekly_goals
     group="Statistics",
     desc="View your weekly study statistics!"
 )
+@ratelimit.ward()
 async def cmd_weekly(ctx):
     """
     Usage``:
@@ -90,7 +96,36 @@ async def cmd_weekly(ctx):
     Description:
         View your weekly study profile.
     """
-    await show_weekly_goals(ctx)
+    page_1 = await _get_weekly_goals(ctx)
+
+    day_start = ctx.alion.day_start
+    last_week_start = day_start - timedelta(days=7 + day_start.weekday())
+
+    history = ctx.client.data.session_history.select_where(
+        guildid=ctx.guild.id,
+        userid=ctx.author.id,
+        start_time=GEQ(last_week_start - timedelta(days=1)),
+        select_columns=(
+            "start_time",
+            "(start_time + duration * interval '1 second') AS end_time"
+        ),
+        _extra="ORDER BY start_time ASC"
+    )
+    timezone = ctx.alion.timezone
+    sessions = [(row['start_time'].astimezone(timezone), row['end_time'].astimezone(timezone)) for row in history]
+
+    page_2 = WeeklyStatsPage(
+        ctx.author.name,
+        f"#{ctx.author.discriminator}",
+        sessions,
+        day_start
+    ).draw()
+    await ctx.reply(
+        files=[
+            image_as_file(page_1, "weekly_stats_1.png"),
+            image_as_file(page_2, "weekly_stats_2.png")
+        ]
+    )
 
 
 async def show_monthly_goals(ctx):
