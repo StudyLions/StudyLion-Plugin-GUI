@@ -225,7 +225,7 @@ class StatsCard:
 
         draw.text(
             (0, position),
-            f"LC: {format_lb(self.data_lb_lc)}",
+            "ANKI: N/A",
             font=self.stats_text_font,
             fill=self.stats_text_colour
         )
