@@ -142,6 +142,7 @@ class GoalPage:
         else:
             self.title_text = "WEEKLY STATISTICS"
             self.task_header = "GOALS OF THE WEEK"
+        self.title_size = self.title_font.getsize(self.title_text)
 
     def draw(self) -> Image:
         image = self.background.copy()
