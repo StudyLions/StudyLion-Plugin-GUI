@@ -599,6 +599,8 @@ class GoalPage:
         return image
 
     def _draw_progress_bar(self, amount):
+        amount = min(amount, 1)
+        amount = max(amount, 0)
         bg = self.progress_bg
         end = self.progress_end
         mask = self.progress_mask
