@@ -15,6 +15,7 @@ async def cmd_reload_gui(ctx):
     importlib.reload(drawing.stats)
     importlib.reload(drawing.tasklist)
     importlib.reload(drawing.weekly)
+    importlib.reload(drawing.monthly)
 
     importlib.reload(goals)
     importlib.reload(leaderboard)

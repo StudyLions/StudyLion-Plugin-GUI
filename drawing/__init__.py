@@ -4,3 +4,4 @@ from .leaderboard import LeaderboardEntry, LeaderboardPage
 from .tasklist import Tasklist
 from .goals import GoalPage
 from .weekly import WeeklyStatsPage
+from .monthly import MonthlyStatsPage

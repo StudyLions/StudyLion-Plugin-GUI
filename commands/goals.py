@@ -9,6 +9,7 @@ from ..module import module, ratelimit
 
 from ..drawing.goals import GoalPage
 from ..drawing.weekly import WeeklyStatsPage
+from ..drawing.monthly import MonthlyStatsPage
 from ..utils import get_avatar, image_as_file
 
 
@@ -95,6 +96,7 @@ async def cmd_weekly(ctx):
         {prefix}weekly
     Description:
         View your weekly study profile.
+        See `{prefix}weeklygoals` to edit your goals!
     """
     page_1 = await _get_weekly_goals(ctx)
 
@@ -128,7 +130,7 @@ async def cmd_weekly(ctx):
     )
 
 
-async def show_monthly_goals(ctx):
+async def _get_monthly_goals(ctx):
     # Fetch goal data
     goal_row = ctx.client.data.monthly_goals.fetch_or_create(
         (ctx.guild.id, ctx.author.id, ctx.alion.month_timestamp)
@@ -188,9 +190,13 @@ async def show_monthly_goals(ctx):
         month=True
     )
 
-    image = goalpage.draw()
-    await ctx.reply(file=image_as_file(image, 'monthly_stats_1.png'))
+    return goalpage.draw()
 
+
+@ratelimit.ward()
+async def show_monthly_goals(ctx):
+    image = await _get_monthly_goals(ctx)
+    await ctx.reply(file=image_as_file(image, 'monthly_stats_1.png'))
 
 goals.display_monthly_goals_for = show_monthly_goals
 
@@ -206,5 +212,98 @@ async def cmd_monthly(ctx):
         {prefix}monthly
     Description:
         View your monthly study profile.
+        See `{prefix}monthlygoals` to edit your goals!
     """
-    await show_monthly_goals(ctx)
+    page_1 = await _get_monthly_goals(ctx)
+
+    day_start = ctx.alion.day_start
+    period_start = day_start - timedelta(days=31*4)
+
+    history = ctx.client.data.session_history.select_where(
+        guildid=ctx.guild.id,
+        userid=ctx.author.id,
+        select_columns=(
+            "start_time",
+            "(start_time + duration * interval '1 second') AS end_time"
+        ),
+        _extra="ORDER BY start_time DESC"
+    )
+    timezone = ctx.alion.timezone
+    sessions = [(row['start_time'].astimezone(timezone), row['end_time'].astimezone(timezone)) for row in history]
+
+    # Streak statistics
+    streak = 0
+    current_streak = None
+    max_streak = 0
+
+    day_attended = True if 'sessions' in ctx.client.objects and ctx.alion.session else None
+    date = day_start
+    daydiff = timedelta(days=1)
+
+    periods = sessions
+
+    i = 0
+    while i < len(periods):
+        row = periods[i]
+        i += 1
+        if row[1] > date:
+            # They attended this day
+            day_attended = True
+            continue
+        elif day_attended is None:
+            # Didn't attend today, but don't break streak
+            day_attended = False
+            date -= daydiff
+            i -= 1
+            continue
+        elif not day_attended:
+            # Didn't attend the day, streak broken
+            date -= daydiff
+            i -= 1
+            pass
+        else:
+            # Attended the day
+            streak += 1
+
+            # Move window to the previous day and try the row again
+            day_attended = False
+            prev_date = date
+            date -= daydiff
+            i -= 1
+
+            # Special case, when the last session started in the previous day
+            # Then the day is already attended
+            if i > 1 and date < periods[i-2][0] <= prev_date:
+                day_attended = True
+
+            continue
+
+        max_streak = max(max_streak, streak)
+        if current_streak is None:
+            current_streak = streak
+        streak = 0
+
+    # Handle loop exit state, i.e. the last streak
+    if day_attended:
+        streak += 1
+    max_streak = max(max_streak, streak)
+    if current_streak is None:
+        current_streak = streak
+
+    first_session_start = sessions[-1][0]
+    sessions = [session for session in sessions if session[1] > period_start]
+    page_2 = MonthlyStatsPage(
+        ctx.author.name,
+        f"#{ctx.author.discriminator}",
+        sessions,
+        day_start.date(),
+        current_streak or 0,
+        max_streak or 0,
+        first_session_start
+    ).draw()
+    await ctx.reply(
+        files=[
+            image_as_file(page_1, "monthly_stats_1.png"),
+            image_as_file(page_2, "monthly_stats_2.png")
+        ]
+    )
