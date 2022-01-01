@@ -230,6 +230,10 @@ async def cmd_monthly(ctx):
     )
     timezone = ctx.alion.timezone
     sessions = [(row['start_time'].astimezone(timezone), row['end_time'].astimezone(timezone)) for row in history]
+    if not sessions:
+        return await ctx.error_reply(
+            "No statistics to show, because you have never studied in this server before!"
+        )
 
     # Streak statistics
     streak = 0
