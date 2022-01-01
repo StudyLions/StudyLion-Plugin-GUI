@@ -388,6 +388,8 @@ class StatsCard:
         ]
 
         for day in streak_middles:
+            if day < 1:
+                continue
             i = day - 1
             if i >= len(centres):
                 # Shouldn't happen, but ignore

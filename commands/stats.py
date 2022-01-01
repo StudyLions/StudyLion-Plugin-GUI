@@ -111,7 +111,7 @@ async def cmd_stats(ctx):
             # They attended this day
             day_attended = True
             if streak_end is None:
-                streak_end = date.day
+                streak_end = (date - month_start).days + 1
             continue
         elif day_attended is None:
             # Didn't attend today, but don't break streak
@@ -139,7 +139,7 @@ async def cmd_stats(ctx):
             if i > 1 and date < periods[i-2][0] <= prev_date:
                 day_attended = True
                 if streak_end is None:
-                    streak_end = date.day
+                    streak_end = (date - month_start).days + 1
 
             continue
 
