@@ -73,7 +73,7 @@ class Tasklist:
 
     # Date text
     date_pre_gap = int(scale * 50)
-    date_font = inter_font('Regular', size=int(scale * 28))
+    date_font = inter_font('Bold', size=int(scale * 28))
     date_colour = '#686868'
     date_gap = int(scale * 50)
 
