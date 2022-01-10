@@ -14,7 +14,7 @@ class TimerCard:
     header_font = inter_font('ExtraBold', size=int(scale*76))
 
     inner_margin = 80
-    inner_sep = 40
+    inner_sep = 15
 
     # Timer section
     # Outer progress bar
@@ -76,7 +76,7 @@ class TimerCard:
 
         # Draw timer
         timer_image = self._draw_progress_bar(self.data_amount)
-        ypos = (
+        ypos = timer_y = (
             self.header_field_height
             + (image.height - self.header_field_height - timer_image.height) // 2
             - self.progress_end.height // 2
@@ -124,7 +124,8 @@ class TimerCard:
         if self.data_users:
             grid_image = self.draw_user_grid()
 
-            ypos = self.header_field_height + (image.height - self.header_field_height - grid_image.height) // 2
+            # ypos = self.header_field_height + (image.height - self.header_field_height - grid_image.height) // 2
+            ypos = timer_y + (timer_image.height - grid_image.height) // 2 - stage_size[1] // 2
             xpos = (
                 self.inner_margin
                 + (timer_x - self.inner_sep - self.inner_margin) // 2
@@ -141,8 +142,8 @@ class TimerCard:
         users = self.data_users
 
         # Set these to 5 and 5 to force top left corner
-        rows, columns = 5, 5
-        # rows = math.ceil(len(users) / 5)
+        rows = math.ceil(len(users) / 5)
+        columns = 5
         # columns = min(len(users), 5)
 
         size = (

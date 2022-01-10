@@ -25,8 +25,6 @@ async def status(self):
          session.duration if (session := Lion.fetch(member.guild.id, member.id).session) else 0)
         for member in self.members
     ]
-    # For testing
-    users = users * 10
     if stage.name == 'BREAK':
         page = BreakTimerCard(name, remaining, duration, users).draw()
     elif stage.name == 'FOCUS':
@@ -56,7 +54,7 @@ async def update_last_status(self):
         else:
             repost = False
 
-    if repost:
+    if repost and self.text_channel:
         try:
             self.reaction_message = await self.text_channel.send(**args)
             await self.reaction_message.add_reaction('✅')
