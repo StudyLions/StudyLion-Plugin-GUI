@@ -1,4 +1,5 @@
 import asyncio
+import time
 from collections import defaultdict
 
 import discord
@@ -35,10 +36,37 @@ async def status(self):
     return {'file': image_as_file(page, name="timer.png")}
 
 
+
+_guard_delay = 20
+_guarded = {}  # timer channel id -> (last_executed_time, currently_waiting)
+
+
+async def guard_request(id):
+    if (result := _guarded.get(id, None)):
+        last, currently = result
+        if currently:
+            return False
+        else:
+            _guarded[id] = (last, True)
+            await asyncio.sleep(_guard_delay - (time.time() - last))
+            _guarded[id] = (time.time(), False)
+            return True
+    else:
+        _guarded[id] = (time.time(), False)
+        return True
+
+
 async def update_last_status(self):
     """
     Update the last posted status message, if it exists.
     """
+    old_message = self.reaction_message
+
+    if not await guard_request(self.channelid):
+        return
+    if old_message != self.reaction_message:
+        return
+
     args = await self.status()
     repost = True
     if self.reaction_message:
