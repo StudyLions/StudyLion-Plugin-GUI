@@ -23,7 +23,8 @@ async def status(self):
     duration = int(stage.duration)
     users = [
         (await get_avatar(member, size=512),
-         session.duration if (session := Lion.fetch(member.guild.id, member.id).session) else 0)
+         session.duration if (session := Lion.fetch(member.guild.id, member.id).session) else 0,
+         session.data.tag if session else None)
         for member in self.members
     ]
     if stage.name == 'BREAK':

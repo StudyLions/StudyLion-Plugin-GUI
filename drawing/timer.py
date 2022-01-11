@@ -41,9 +41,18 @@ class TimerCard:
     time_font = inter_font('Black', size=int(scale*26))
     time_colour = '#FFFFFF'
 
+    tag_gap = int(scale * 2)
+    tag: Image
+    tag_font = inter_font('SemiBold', size=int(scale*25))
+
     # grid_x = (background.width - progress_mask.width - 2 * progress_end.width - grid_start[0] - user_bg.width) // 4
     grid_x = 344
     grid_y = 246
+
+    # Date text
+    date_font = inter_font('Bold', size=int(scale * 28))
+    date_colour = '#6f6e6f'
+    date_gap = int(scale * 50)
 
     def __init__(self, name, remaining, duration, users):
         self.data_name = name
@@ -136,6 +145,19 @@ class TimerCard:
                 grid_image,
                 (xpos, ypos)
             )
+
+        # Draw the footer
+        ypos = image.height
+        ypos -= self.date_gap
+        date_text = "Use !now [text] to show what you are working on!"
+        size = self.date_font.getsize(date_text)
+        ypos -= size[1]
+        draw.text(
+            ((image.width - size[0]) // 2, ypos),
+            date_text,
+            font=self.date_font,
+            fill=self.date_colour
+        )
         return image
 
     def draw_user_grid(self) -> Image:
@@ -148,7 +170,7 @@ class TimerCard:
 
         size = (
             (columns - 1) * self.grid_x + self.user_bg.width,
-            (rows - 1) * self.grid_y + self.user_bg.height
+            (rows - 1) * self.grid_y + self.user_bg.height + self.tag_gap + self.tag.height
         )
 
         image = Image.new(
@@ -167,10 +189,14 @@ class TimerCard:
         return image
 
     def draw_user(self, user):
-        image = self.user_bg.copy()
+        width = self.user_bg.width
+        height = self.user_bg.height + self.tag_gap + self.tag.height
+        image = Image.new('RGBA', (width, height))
         draw = ImageDraw.Draw(image)
 
-        avatar, time = user
+        image.alpha_composite(self.user_bg)
+
+        avatar, time, tag = user
         avatar = avatar.copy()
         timestr = self.format_time(time, hours=True)
 
@@ -178,19 +204,33 @@ class TimerCard:
         avatar.paste((0, 0, 0, 0), mask=self.user_mask)
 
         # Resize avatar
-        avatar.thumbnail((image.height - 10, image.height - 10))
+        avatar.thumbnail((self.user_bg.height - 10, self.user_bg.height - 10))
 
         image.alpha_composite(
             avatar,
             (5, 5)
         )
         draw.text(
-            (120, image.height // 2),
+            (120, self.user_bg.height // 2),
             timestr,
             anchor='lm',
             font=self.time_font,
             fill=self.time_colour
         )
+
+        if tag:
+            ypos = self.user_bg.height + self.tag_gap
+            image.alpha_composite(
+                self.tag,
+                ((image.width - self.tag.width) // 2, ypos)
+            )
+            draw.text(
+                (image.width // 2, ypos + self.tag.height // 2),
+                tag,
+                font=self.tag_font,
+                fill='#FFFFFF',
+                anchor='mm'
+            )
         return image
 
     def _draw_progress_bar(self, amount):
@@ -302,6 +342,7 @@ class FocusTimerCard(TimerCard):
     progress_end = Image.open(asset_path("timer/progress_end_focus.png")).convert('RGBA')
     progress_start = Image.open(asset_path("timer/progress_start_focus.png")).convert('RGBA')
     stage_text = "FOCUS"
+    tag = Image.open(asset_path("timer/focus_tag.png")).convert("RGBA")
 
 
 class BreakTimerCard(TimerCard):
@@ -311,3 +352,4 @@ class BreakTimerCard(TimerCard):
     progress_end = Image.open(asset_path("timer/progress_end_break.png")).convert('RGBA')
     progress_start = Image.open(asset_path("timer/progress_start_break.png")).convert('RGBA')
     stage_text = "BREAK"
+    tag = Image.open(asset_path("timer/break_tag.png")).convert("RGBA")
