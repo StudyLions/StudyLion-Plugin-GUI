@@ -41,7 +41,7 @@ class TimerCard:
     time_font = inter_font('Black', size=int(scale*26))
     time_colour = '#FFFFFF'
 
-    tag_gap = int(scale * 2)
+    tag_gap = 11
     tag: Image
     tag_font = inter_font('SemiBold', size=int(scale*25))
 
