@@ -59,7 +59,7 @@ class TimerCard:
         self.data_remaining = 5 * math.ceil(remaining / 5)
         self.data_duration = duration
         self.data_amount = 1 - remaining / duration
-        self.data_users = sorted(users[:25], key=lambda user: user[1], reverse=True)  # (avatar, time)
+        self.data_users = sorted(users, key=lambda user: user[1], reverse=True)  # (avatar, time)
 
     @staticmethod
     def format_time(time, hours=True):
@@ -161,7 +161,7 @@ class TimerCard:
         return image
 
     def draw_user_grid(self) -> Image:
-        users = self.data_users
+        users = list(self.data_users)[:25]
 
         # Set these to 5 and 5 to force top left corner
         rows = math.ceil(len(users) / 5)
