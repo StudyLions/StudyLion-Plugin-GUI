@@ -34,7 +34,7 @@ async def status(self):
     else:
         page = None
 
-    return {'file': image_as_file(page, name="timer.png")}
+    return {'files': [image_as_file(page, name="timer.png")]}
 
 
 
@@ -76,7 +76,7 @@ async def update_last_status(self):
                 client._connection.http,
                 self.reaction_message.channel.id,
                 self.reaction_message.id,
-                files=[args['file']]
+                **args
             )
         except discord.HTTPException:
             pass
