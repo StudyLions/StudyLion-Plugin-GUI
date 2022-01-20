@@ -1,11 +1,11 @@
-import importlib
 from datetime import timedelta
+import asyncio
 
 from data.conditions import GEQ
 
 from modules.stats import goals
 
-from ..module import module, ratelimit
+from ..module import module, ratelimit, executor
 
 from ..drawing.goals import GoalPage
 from ..drawing.weekly import WeeklyStatsPage
@@ -61,7 +61,7 @@ async def _get_weekly_goals(ctx):
     goalpage = GoalPage(
         name=ctx.author.name,
         discrim=f"#{ctx.author.discriminator}",
-        avatar=await get_avatar(ctx.author, size=256),
+        avatar=await get_avatar(ctx.client, ctx.author.id, size=256),
         badges=ctx.client.data.profile_tags.queries.get_tags_for(ctx.author.guild.id, ctx.author.id),
         tasks_done=tasks_done,
         studied_hours=study_hours,
@@ -73,7 +73,7 @@ async def _get_weekly_goals(ctx):
         month=False
     )
 
-    return goalpage.draw()
+    return await asyncio.get_event_loop().run_in_executor(executor, goalpage.draw)
 
 
 @ratelimit.ward()
@@ -116,12 +116,14 @@ async def cmd_weekly(ctx):
     timezone = ctx.alion.timezone
     sessions = [(row['start_time'].astimezone(timezone), row['end_time'].astimezone(timezone)) for row in history]
 
-    page_2 = WeeklyStatsPage(
+    card = WeeklyStatsPage(
         ctx.author.name,
         f"#{ctx.author.discriminator}",
         sessions,
         day_start
-    ).draw()
+    )
+    page_2 = await asyncio.get_event_loop().run_in_executor(executor, card.draw)
+
     await ctx.reply(
         files=[
             image_as_file(page_1, "weekly_stats_1.png"),
@@ -178,7 +180,7 @@ async def _get_monthly_goals(ctx):
     goalpage = GoalPage(
         name=ctx.author.name,
         discrim=f"#{ctx.author.discriminator}",
-        avatar=await get_avatar(ctx.author, size=256),
+        avatar=await get_avatar(ctx.client, ctx.author.id, size=256),
         badges=ctx.client.data.profile_tags.queries.get_tags_for(ctx.author.guild.id, ctx.author.id),
         tasks_done=tasks_done,
         studied_hours=study_hours,
@@ -190,7 +192,7 @@ async def _get_monthly_goals(ctx):
         month=True
     )
 
-    return goalpage.draw()
+    return await asyncio.get_event_loop().run_in_executor(executor, goalpage.draw)
 
 
 @ratelimit.ward()
@@ -296,7 +298,7 @@ async def cmd_monthly(ctx):
 
     first_session_start = sessions[-1][0]
     sessions = [session for session in sessions if session[1] > period_start]
-    page_2 = MonthlyStatsPage(
+    card = MonthlyStatsPage(
         ctx.author.name,
         f"#{ctx.author.discriminator}",
         sessions,
@@ -304,7 +306,8 @@ async def cmd_monthly(ctx):
         current_streak or 0,
         max_streak or 0,
         first_session_start
-    ).draw()
+    )
+    page_2 = await asyncio.get_event_loop().run_in_executor(executor, card.draw)
     await ctx.reply(
         files=[
             image_as_file(page_1, "monthly_stats_1.png"),

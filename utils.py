@@ -6,6 +6,7 @@ from PIL import Image, ImageFont
 
 from discord.http import Route
 from discord.utils import to_json
+from discord.asset import Asset
 
 
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
@@ -21,25 +22,43 @@ def inter_font(name, **kwargs):
 
 default_avatar_256 = Image.open(asset_path('default_avatar_0.png')).convert('RGBA')
 
+# Map from userid to BytesIO data stream
 _avatar_cache = TTLCache(1000, 10*60)
 
 
-async def get_avatar(user, size=512):
-    if user is None:
-        # Return default avatar of the correct size
+async def get_avatar(client, userid, size=512) -> Image:
+    if not (data := _avatar_cache.get(userid, None)):
+        if (user := client.get_user(userid)):
+            asset = user.avatar_url_as(format='png', size=512)
+        elif (user_data := client.data.user_config.fetch(userid)) and (avatar_hash := user_data.avatar_hash):
+            asset = Asset(
+                client._connection,
+                '/avatars/{userid}/{avatar_hash}.png?size=512'.format(
+                    userid=userid,
+                    avatar_hash=avatar_hash,
+                )
+            )
+        else:
+            asset = None
+
+        if asset:
+            try:
+                data = io.BytesIO()
+                await asset.save(data)
+                _avatar_cache[userid] = data
+            except discord.HTTPException:
+                data = None
+
+    if data:
+        data.seek(0)
+        image = Image.open(data).convert('RGBA')
+        if size < image.width:
+            image.thumbnail((size, size))
+        elif size > image.width:
+            image = image.resize((size, size))
+    else:
         image = default_avatar_256.copy()
         image.resize((size, size))
-    elif image := _avatar_cache.get((user.id, size), None):
-        pass
-    else:
-        with io.BytesIO() as data:
-            await user.avatar_url_as(format='png', size=size).save(data)
-            image = Image.open(data).convert('RGBA')
-            # Upscale if required
-            if image.width < size or image.height < size:
-                image = image.resize((size, size))
-
-            _avatar_cache[(user.id, size)] = image
 
     return image
 

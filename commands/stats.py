@@ -1,9 +1,8 @@
-import io
-import discord
+import asyncio
 from datetime import datetime, timedelta
 from cmdClient.checks import in_guild
 
-from utils.lib import prop_tabulate, utc_now
+from utils.lib import utc_now
 from data import tables
 from data.conditions import LEQ
 from core import Lion
@@ -13,7 +12,7 @@ from modules.study.tracking.data import session_history
 from ..drawing import StatsCard, ProfileCard
 from ..utils import get_avatar, image_as_file
 
-from ..module import module, ratelimit
+from ..module import module, ratelimit, executor
 
 
 @module.cmd(
@@ -156,12 +155,13 @@ async def cmd_stats(ctx):
         streaks.append((streak_end - streak + 1, streak_end))
 
     # We have all the data for the stats card
-    stats_image = StatsCard(
+    card = StatsCard(
         (time_rank, coin_rank),
         list(reversed(study_times)),
         workout_total,
         streaks,
-    ).draw()
+    )
+    stats_image = await asyncio.get_event_loop().run_in_executor(executor, card.draw)
 
     # Current economy balance (accounting for current session)
     coins = lion.coins
@@ -217,8 +217,8 @@ async def cmd_stats(ctx):
         next_rank = None
 
     # We have all the data for the profile card
-    avatar = await get_avatar(target, size=256)
-    profile_image = ProfileCard(
+    avatar = await get_avatar(ctx.client, target.id, size=256)
+    card = ProfileCard(
         target.name,
         '#{}'.format(target.discriminator),
         avatar,
@@ -229,7 +229,8 @@ async def cmd_stats(ctx):
         current_rank=current_rank,
         next_rank=next_rank,
         badges=ctx.client.data.profile_tags.queries.get_tags_for(ctx.guild.id, target.id)
-    ).draw()
+    )
+    profile_image = await asyncio.get_event_loop().run_in_executor(executor, card.draw)
 
     profile_file = image_as_file(profile_image, f"profile_{target.id}.png")
     stats_file = image_as_file(stats_image, f"stats_{target.id}.png")

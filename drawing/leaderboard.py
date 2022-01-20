@@ -5,19 +5,28 @@ from ..utils import asset_path, inter_font, get_avatar
 
 
 class LeaderboardEntry:
-    def __init__(self, position, time, member=None, name=None):
+    __slots__ = (
+        'userid',
+        'position',
+        'time',
+        'name',
+        'image'
+    )
+
+    def __init__(self, userid, position, time, name):
+        self.userid = userid
+
         self.position = position
         self.time = time
-        self.member = member
 
-        self.name = member.display_name if member else str(name)
+        self.name = name
         self.name = ''.join(i if ord(i) < 128 or i == '∞' else '*' for i in self.name)
 
         self.image = None
 
-    async def save_image(self):
+    async def save_avatar_from(self, client):
         if not self.image:
-            self.image = await get_avatar(self.member, size=512 if self.position in (1, 2, 3) else 256)
+            self.image = await get_avatar(client, self.userid, size=512 if self.position in (1, 2, 3) else 256)
 
 
 class LeaderboardPage:

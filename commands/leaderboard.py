@@ -12,7 +12,7 @@ from utils.interactive import discord_shield
 from ..drawing import LeaderboardEntry, LeaderboardPage
 from ..utils import image_as_file, edit_files
 
-from ..module import module, ratelimit
+from ..module import module, ratelimit, executor
 
 
 next_emoji = "▶"
@@ -70,7 +70,7 @@ async def cmd_top(ctx):
     entries = []
     for i, (userid, time) in enumerate(user_data):
         entries.append(
-            LeaderboardEntry(i + 1, time, ctx.guild.get_member(userid), Lion.fetch(ctx.guild.id, userid).name)
+            LeaderboardEntry(userid, i + 1, time, Lion.fetch(ctx.guild.id, userid).name)
         )
 
         if ctx.author.id == userid:
@@ -86,11 +86,12 @@ async def cmd_top(ctx):
     author_page = (author_rank - 1) // 10 if author_rank is not None else None
 
     if page_count == 1:
-        await asyncio.gather(*(entry.save_image() for entry in entries))
+        await asyncio.gather(*(entry.save_avatar_from(ctx.client) for entry in entries))
         page = pages[0]
-        image = page.draw()
+        image = await asyncio.get_event_loop().run_in_executor(executor, page.draw)
         _file = image_as_file(image, "leaderboard.png")
         await ctx.reply(file=_file)
+        del image
     else:
         page_i = 0
 
@@ -99,8 +100,11 @@ async def cmd_top(ctx):
         async def get_page(i, prepare=False):
             if not (_image := page_cache.get(i, None)):
                 page = pages[i % page_count]
-                await asyncio.gather(*(entry.save_image() for entry in page.entries))
-                page_cache[i] = _image = page.draw()
+                await asyncio.gather(*(entry.save_avatar_from(ctx.client) for entry in page.entries))
+                page_cache[i] = _image = await asyncio.get_event_loop().run_in_executor(
+                    executor,
+                    page.draw
+                )
 
             return None if prepare else image_as_file(_image, f"leaderboard_{i}.png")
 

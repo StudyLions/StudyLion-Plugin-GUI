@@ -1,10 +1,15 @@
+import asyncio
+
 from core import Lion
 from data import tables
+from meta import client
 
 from modules.todo.Tasklist import Tasklist as TextTasklist
 
 from ..drawing import Tasklist
 from ..utils import get_avatar, image_as_file, edit_files
+
+from ..module import executor
 
 
 class GUITasklist(TextTasklist):
@@ -13,16 +18,17 @@ class GUITasklist(TextTasklist):
             (i, task.content, bool(task.completed_at))
             for (i, task) in enumerate(self.tasklist)
         ]
-        avatar = await get_avatar(self.member, size=256)
+        avatar = await get_avatar(client, self.member.id, size=256)
         date = Lion.fetch(self.member.guild.id, self.member.id).day_start
-        self.pages = Tasklist(
+        tasklist = Tasklist(
             self.member.name,
             f"#{self.member.discriminator}",
             avatar,
             tasks,
             date,
             badges=tables.profile_tags.queries.get_tags_for(self.member.guild.id, self.member.id)
-        ).draw()
+        )
+        self.pages = await asyncio.get_event_loop().run_in_executor(executor, tasklist.draw)
 
         return self.pages
 
