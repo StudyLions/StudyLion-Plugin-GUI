@@ -24,6 +24,13 @@ def format_lb(pos):
     return f"{pos}TH"
 
 
+def format_time(seconds):
+    return "{:02}:{:02}".format(
+        int(seconds // 3600),
+        int(seconds % 3600 // 60)
+    )
+
+
 class StatsCard:
     # Drawing constant or default values
     scale = 2  # General size scale to match background resolution
@@ -225,7 +232,7 @@ class StatsCard:
 
         draw.text(
             (0, position),
-            "ANKI: N/A",
+            "ANKI: COMING SOON",
             font=self.stats_text_font,
             fill=self.stats_text_colour
         )
@@ -242,7 +249,7 @@ class StatsCard:
 
         draw.text(
             (0, position),
-            f'DAILY: {self.data_time_daily // 3600} H',
+            f'DAILY: {format_time(self.data_time_daily)}',
             font=self.stats_text_font,
             fill=self.stats_text_colour
         )
@@ -250,7 +257,7 @@ class StatsCard:
 
         draw.text(
             (0, position),
-            f'MONTHLY: {self.data_time_monthly // 3600} H',
+            f'MONTHLY: {format_time(self.data_time_monthly)}',
             font=self.stats_text_font,
             fill=self.stats_text_colour
         )
@@ -258,7 +265,7 @@ class StatsCard:
 
         draw.text(
             (0, position),
-            f'WEEKLY: {self.data_time_weekly // 3600} H',
+            f'WEEKLY: {format_time(self.data_time_weekly)}',
             font=self.stats_text_font,
             fill=self.stats_text_colour
         )
@@ -266,7 +273,7 @@ class StatsCard:
 
         draw.text(
             (0, position),
-            f'ALL TIME: {self.data_time_all // 3600} H',
+            f'ALL TIME: {format_time(self.data_time_all)}',
             font=self.stats_text_font,
             fill=self.stats_text_colour
         )
