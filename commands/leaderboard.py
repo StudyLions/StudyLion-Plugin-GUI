@@ -35,8 +35,6 @@ async def cmd_top(ctx):
         {prefix}top100
     Description:
         Display the study time leaderboard, or the top 100.
-
-        Use the paging reactions or send `p<n>` to switch pages (e.g. `p11` to switch to page 11).
     """
     # Handle args
     if ctx.args and not ctx.args == "100":
@@ -64,12 +62,15 @@ async def cmd_top(ctx):
     if not user_data:
         return await ctx.reply("No leaderboard entries yet!")
 
+    # Prefetch to make sure the lions are up to date
+    tables.lions.fetch_rows_where(guildid=ctx.guild.id)
+
     # Extract entries
     author_rank = None
     entries = []
     for i, (userid, time) in enumerate(user_data):
         entries.append(
-            LeaderboardEntry(i + 1, time, ctx.guild.get_member(userid), str(userid))
+            LeaderboardEntry(i + 1, time, ctx.guild.get_member(userid), Lion.fetch(ctx.guild.id, userid).name)
         )
 
         if ctx.author.id == userid:
