@@ -30,7 +30,7 @@ async def get_avatar(client, userid, size=512) -> Image:
     if not (data := _avatar_cache.get(userid, None)):
         if (user := client.get_user(userid)):
             asset = user.avatar_url_as(format='png', size=512)
-        elif (user_data := client.data.user_config.fetch(userid)) and (avatar_hash := user_data.avatar_hash):
+        elif (avatar_hash := client.data.user_config.fetch_or_create(userid).avatar_hash):
             asset = Asset(
                 client._connection,
                 '/avatars/{userid}/{avatar_hash}.png?size=512'.format(

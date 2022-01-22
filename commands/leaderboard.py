@@ -50,7 +50,7 @@ async def cmd_top(ctx):
 
     args = {
         'guildid': ctx.guild.id,
-        'select_columns': ('userid', 'total_tracked_time::INTEGER'),
+        'select_columns': ('userid', 'total_tracked_time::INTEGER', 'display_name'),
         '_extra': "AND total_tracked_time > 0 ORDER BY total_tracked_time DESC " + ("LIMIT 100" if top100 else "")
     }
     if exclude:
@@ -62,15 +62,19 @@ async def cmd_top(ctx):
     if not user_data:
         return await ctx.reply("No leaderboard entries yet!")
 
-    # Prefetch to make sure the lions are up to date
-    tables.lions.fetch_rows_where(guildid=ctx.guild.id)
-
     # Extract entries
     author_rank = None
     entries = []
-    for i, (userid, time) in enumerate(user_data):
+    for i, (userid, time, display_name) in enumerate(user_data):
+        if (member := ctx.guild.get_member(userid)):
+            name = member.display_name
+        elif display_name:
+            name = display_name
+        else:
+            name = str(userid)
+
         entries.append(
-            LeaderboardEntry(userid, i + 1, time, Lion.fetch(ctx.guild.id, userid).name)
+            LeaderboardEntry(userid, i + 1, time, name)
         )
 
         if ctx.author.id == userid:
