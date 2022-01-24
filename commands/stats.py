@@ -6,6 +6,7 @@ from utils.lib import utc_now
 from data import tables
 from data.conditions import LEQ
 from core import Lion
+from LionContext import LionContext as Context
 
 from modules.study.tracking.data import session_history
 
@@ -15,34 +16,7 @@ from ..utils import get_avatar, image_as_file
 from ..module import module, ratelimit, executor
 
 
-@module.cmd(
-    "stats",
-    group="Statistics",
-    desc="View your personal profile and study statistics!",
-    aliases=('profile',)
-)
-@in_guild()
-@ratelimit.ward(member=False)
-async def cmd_stats(ctx):
-    """
-    Usage``:
-        {prefix}stats
-        {prefix}stats <mention>
-    Description:
-        View your study profile, or that of the mentioned user.
-    """
-    # Identify the target
-    if ctx.args:
-        if not ctx.msg.mentions:
-            return await ctx.error_reply("Please mention a user to view their statistics!")
-        target = ctx.msg.mentions[0]
-    else:
-        target = ctx.author
-
-    # System sync
-    Lion.sync()
-
-    # Fetch the required data
+async def get_stats_card_for(ctx: Context, target):
     lion = Lion.fetch(ctx.guild.id, target.id)
 
     history = session_history.select_where(
@@ -161,7 +135,11 @@ async def cmd_stats(ctx):
         workout_total,
         streaks,
     )
-    stats_image = await asyncio.get_event_loop().run_in_executor(executor, card.draw)
+    return await asyncio.get_event_loop().run_in_executor(executor, card.draw)
+
+
+async def get_profile_card_for(ctx: Context, target):
+    lion = Lion.fetch(ctx.guild.id, target.id)
 
     # Current economy balance (accounting for current session)
     coins = lion.coins
@@ -230,9 +208,73 @@ async def cmd_stats(ctx):
         next_rank=next_rank,
         badges=ctx.client.data.profile_tags.queries.get_tags_for(ctx.guild.id, target.id)
     )
-    profile_image = await asyncio.get_event_loop().run_in_executor(executor, card.draw)
+    return await asyncio.get_event_loop().run_in_executor(executor, card.draw)
+
+
+@module.cmd(
+    "stats",
+    group="Statistics",
+    desc="View your server study statistics!"
+)
+@in_guild()
+@ratelimit.ward(member=False)
+async def cmd_stats(ctx):
+    """
+    Usage``:
+        {prefix}stats
+        {prefix}stats <mention>
+    Description:
+        View your study statistics in this server, or those of the mentioned member.
+    """
+    # Identify the target
+    if ctx.args:
+        if not ctx.msg.mentions:
+            return await ctx.error_reply("Please mention a user to view their statistics!")
+        target = ctx.msg.mentions[0]
+    else:
+        target = ctx.author
+
+    # System sync
+    Lion.sync()
+
+    # Fetch the cards
+    profile_image = await get_profile_card_for(ctx, target)
+    stats_image = await get_stats_card_for(ctx, target)
 
     profile_file = image_as_file(profile_image, f"profile_{target.id}.png")
     stats_file = image_as_file(stats_image, f"stats_{target.id}.png")
 
     await ctx.reply(files=[profile_file, stats_file])
+
+
+@module.cmd(
+    "profile",
+    group="Statistics",
+    desc="View your personal study profile!"
+)
+@in_guild()
+@ratelimit.ward(member=False)
+async def cmd_profile(ctx):
+    """
+    Usage``:
+        {prefix}profile
+        {prefix}profile <mention>
+    Description:
+        View your server study profile, or that of the mentioned user.
+    """
+    # Identify the target
+    if ctx.args:
+        if not ctx.msg.mentions:
+            return await ctx.error_reply("Please mention a user to view their profile!")
+        target = ctx.msg.mentions[0]
+    else:
+        target = ctx.author
+
+    # System sync
+    Lion.sync()
+
+    # Fetch the cards
+    profile_image = await get_profile_card_for(ctx, target)
+    profile_file = image_as_file(profile_image, f"profile_{target.id}.png")
+
+    await ctx.reply(file=profile_file)
