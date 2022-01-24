@@ -47,6 +47,9 @@ class Tasklist:
     other_page_bg = Image.open(asset_path("tasklist/other/bg.png")).convert('RGBA')
     other_page_frame = Image.open(asset_path("tasklist/other/frame.png")).convert('RGBA')
 
+    # Help frame
+    help_frame = Image.open(asset_path("tasklist/help_frame.png")).convert('RGBA')
+
     # Tasks
     task_start_position = (100, 75)
 
@@ -131,26 +134,35 @@ class Tasklist:
         # Start from the bottom
         ypos = image.height
 
-        # Draw the date text
-        ypos -= self.date_gap
-        date_text = self.data_date.strftime("As of %d %b")
-        size = self.date_font.getsize(date_text)
-        ypos -= size[1]
-        draw.text(
-            ((image.width - size[0]) // 2, ypos),
-            date_text,
-            font=self.date_font,
-            fill=self.date_colour
-        )
-        ypos -= self.date_pre_gap
+        if self.data_tasks:
+            # Draw the date text
+            ypos -= self.date_gap
+            date_text = self.data_date.strftime("As of %d %b")
+            size = self.date_font.getsize(date_text)
+            ypos -= size[1]
+            draw.text(
+                ((image.width - size[0]) // 2, ypos),
+                date_text,
+                font=self.date_font,
+                fill=self.date_colour
+            )
+            ypos -= self.date_pre_gap
 
-        # Draw the tasks
-        task_image = self._draw_tasks_into(self.first_page_frame.copy())
-        ypos -= task_image.height
-        image.alpha_composite(
-            task_image,
-            ((image.width - task_image.width) // 2, ypos)
-        )
+            # Draw the tasks
+            task_image = self._draw_tasks_into(self.first_page_frame.copy())
+
+            ypos -= task_image.height
+            image.alpha_composite(
+                task_image,
+                ((image.width - task_image.width) // 2, ypos)
+            )
+        else:
+            # Draw the help frame
+            ypos -= self.date_gap
+            image.alpha_composite(
+                self.help_frame,
+                ((image.width - self.help_frame.width) // 2, ypos - self.help_frame.height)
+            )
 
         return image
 
