@@ -1,5 +1,7 @@
 import asyncio
 import time
+import logging
+import traceback
 from collections import defaultdict
 
 import discord
@@ -102,11 +104,26 @@ async def play_alert(channel: discord.VoiceChannel, alert_file):
         return
 
     async with guild_locks[channel.guild.id]:
-        vc = channel.guild.voice_client
-        if not vc:
-            vc = await channel.connect()
-        elif vc.channel != channel:
-            await vc.move_to(channel)
+        try:
+            vc = channel.guild.voice_client
+            if not vc:
+                vc = await asyncio.wait_for(
+                    channel.connect(timeout=10, reconnect=False),
+                    20
+                )
+            elif vc.channel != channel:
+                await vc.move_to(channel)
+        except asyncio.TimeoutError:
+            client.log(
+                f"Timed out while attempting to connect to '{channel.name}' (cid:{channel.id}) "
+                f"in '{channel.guild.name}' (gid:{channel.guild.id}).",
+                context="TIMER_ALERT",
+                level=logging.WARNING
+            )
+            vc = channel.guild.voice_client
+            if vc:
+                await vc.disconnect(force=True)
+            return
 
         audio_stream = open(alert_file, 'rb')
         try:
@@ -119,15 +136,24 @@ async def play_alert(channel: discord.VoiceChannel, alert_file):
             await asyncio.sleep(1)
             count += 1
 
-        await vc.disconnect()
+        await vc.disconnect(force=True)
 
 
 async def notify_hook(self, old_stage, new_stage):
-    if new_stage.name == 'BREAK':
-        await play_alert(self.channel, asset_path('timer/voice/break_alert.wav'))
-    else:
-        await play_alert(self.channel, asset_path('timer/voice/focus_alert.wav'))
-
+    try:
+        if new_stage.name == 'BREAK':
+            await play_alert(self.channel, asset_path('timer/voice/break_alert.wav'))
+        else:
+            await play_alert(self.channel, asset_path('timer/voice/focus_alert.wav'))
+    except Exception:
+        full_traceback = traceback.format_exc()
+        client.log(
+            f"Caught an unhandled exception while playing timer alert in '{self.channel.name}' (cid:{self.channel.id})"
+            f" in '{self.channel.guild.name}' (gid:{self.channel.guild.id}).\n"
+            f"{full_traceback}",
+            context="TIMER_ALERT",
+            level=logging.ERROR
+        )
 
 Timer.status = status
 Timer.update_last_status = update_last_status
