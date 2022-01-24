@@ -302,7 +302,7 @@ class Tasklist:
                 image.width - xpos - self.task_done_number_bg.width - self.task_num_sep,
                 done
             )
-            if task_image.height + ypos > image.height:
+            if task_image.height + ypos + self.task_inter_gap > image.height:
                 break
 
             # Draw number background
