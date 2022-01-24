@@ -189,8 +189,6 @@ class WeeklyStatsPage:
         self.data_hours = [time / 3600 for time in times]
         for i in range(len(self.data_hours), 14):
             self.data_hours.append(0)
-        print(periods)
-        print(self.data_hours)
 
         self.date_labels = [
             (self.week_start + timedelta(days=i)).strftime('%d/%m')

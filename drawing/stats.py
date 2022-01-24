@@ -180,10 +180,6 @@ class StatsCard:
         col1 = self.draw_column_1()
         col2 = self.draw_column_2()
 
-        if col1.width + col2.width > container.width:
-            # TODO: Error
-            print("Warning: Container overflow! Columns are too wide.")
-
         container.alpha_composite(col1)
         container.alpha_composite(col2, (container.width - col2.width, 0))
 
