@@ -9,6 +9,9 @@ class GoalPage:
 
     background = Image.open(asset_path("goals/background.png")).convert('RGBA')
 
+    week_help_frame = Image.open(asset_path("weekly/help_frame.png")).convert('RGBA')
+    month_help_frame = Image.open(asset_path("monthly/help_frame.png")).convert('RGBA')
+
     # Title section
     title_pre_gap = int(scale * 40)
     title_text = "MONTHLY STATISTICS"
@@ -210,23 +213,34 @@ class GoalPage:
         )
         ypos -= self.date_pre_gap
 
-        # Draw the tasks
-        task_image = self._draw_tasks()
+        if self.data_goals or self.data_tasks_goal or self.data_studied_goal:
+            # Draw the tasks
+            task_image = self._draw_tasks()
 
-        ypos -= task_image.height
-        image.alpha_composite(
-            task_image,
-            ((image.width - task_image.width) // 2, ypos)
-        )
+            ypos -= task_image.height
+            image.alpha_composite(
+                task_image,
+                ((image.width - task_image.width) // 2, ypos)
+            )
 
-        # Draw the progress bars
+            # Draw the progress bars
+            progress_image = self._draw_progress()
+            ypos -= progress_image.height + self.progress_gap
+            image.alpha_composite(
+                progress_image,
+                ((image.width - progress_image.width) // 2, ypos)
+            )
+        else:
+            if self.data_month:
+                help_frame = self.month_help_frame
+            else:
+                help_frame = self.week_help_frame
 
-        progress_image = self._draw_progress()
-        ypos -= progress_image.height + self.progress_gap
-        image.alpha_composite(
-            progress_image,
-            ((image.width - progress_image.width) // 2, ypos)
-        )
+            ypos -= help_frame.height
+            image.alpha_composite(
+                help_frame,
+                ((image.width - help_frame.width) // 2, ypos)
+            )
 
         return image
 
