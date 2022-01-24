@@ -44,14 +44,15 @@ class GUITasklist(TextTasklist):
             for (i, task) in enumerate(self.tasklist)
         ]
         avatar = await get_avatar(client, self.member.id, size=256)
-        date = Lion.fetch(self.member.guild.id, self.member.id).day_start
+        lion = Lion.fetch(self.member.guild.id, self.member.id)
+        date = lion.day_start
         tasklist = Tasklist(
             self.member.name,
             f"#{self.member.discriminator}",
             avatar,
             tasks,
             date,
-            badges=tables.profile_tags.queries.get_tags_for(self.member.guild.id, self.member.id)
+            badges=lion.profile_tags
         )
         self.pages = await asyncio.get_event_loop().run_in_executor(executor, tasklist.draw)
 

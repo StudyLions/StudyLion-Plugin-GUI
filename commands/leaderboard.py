@@ -6,7 +6,6 @@ from cmdClient.checks import in_guild
 
 import data
 from data import tables
-from core import Lion
 from utils.interactive import discord_shield
 
 from ..drawing import LeaderboardEntry, LeaderboardPage

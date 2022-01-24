@@ -206,7 +206,7 @@ async def get_profile_card_for(ctx: Context, target):
         attendance=acc_rate,
         current_rank=current_rank,
         next_rank=next_rank,
-        badges=ctx.client.data.profile_tags.queries.get_tags_for(ctx.guild.id, target.id)
+        badges=lion.profile_tags
     )
     return await asyncio.get_event_loop().run_in_executor(executor, card.draw)
 
