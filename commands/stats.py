@@ -9,6 +9,7 @@ from core import Lion
 from LionContext import LionContext as Context
 
 from modules.study.tracking.data import session_history
+from modules.stats.achievements import get_achievements_for
 
 from ..drawing import StatsCard, ProfileCard
 from ..utils import get_avatar, image_as_file
@@ -194,6 +195,8 @@ async def get_profile_card_for(ctx: Context, target):
     else:
         next_rank = None
 
+    achievements = await get_achievements_for(target)
+
     # We have all the data for the profile card
     avatar = await get_avatar(ctx.client, target.id, size=256)
     card = ProfileCard(
@@ -203,6 +206,7 @@ async def get_profile_card_for(ctx: Context, target):
         coins,
         season_time,
         answers=None,
+        achievements=[i for i, ach in enumerate(achievements) if ach.level_id > 0],
         attendance=acc_rate,
         current_rank=current_rank,
         next_rank=next_rank,
