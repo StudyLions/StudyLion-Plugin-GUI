@@ -1,3 +1,6 @@
-from . import module
-from .commands import stats, leaderboard, tasklist, goals, reloadgui, timer
-from .drawing import *
+from .src import module
+
+import sys
+import os
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+sys.path.append(__location__)

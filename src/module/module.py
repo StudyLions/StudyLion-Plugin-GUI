@@ -1,4 +1,3 @@
-from concurrent.futures import ProcessPoolExecutor
 import logging
 
 from LionModule import LionModule
@@ -21,7 +20,5 @@ class PluginModule(LionModule):
 module = PluginModule("GUI")
 
 ratelimit = RateLimit(5, 30)
-
-executor = ProcessPoolExecutor(1)
 
 logging.getLogger('PIL').setLevel(logging.WARNING)

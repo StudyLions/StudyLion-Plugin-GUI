@@ -1,4 +1,5 @@
 import asyncio
+import time
 from datetime import datetime, timedelta
 from cmdClient.checks import in_guild
 
@@ -11,10 +12,10 @@ from LionContext import LionContext as Context
 from modules.study.tracking.data import session_history
 from modules.stats.achievements import get_achievements_for
 
-from ..drawing import StatsCard, ProfileCard
-from ..utils import get_avatar, image_as_file
+from ...cards import StatsCard, ProfileCard
+from ...utils import get_avatar_key, image_as_file
 
-from ..module import module, ratelimit, executor
+from ..module import module, ratelimit
 
 
 async def get_stats_card_for(ctx: Context, target):
@@ -130,13 +131,12 @@ async def get_stats_card_for(ctx: Context, target):
         streaks.append((streak_end - streak + 1, streak_end))
 
     # We have all the data for the stats card
-    card = StatsCard(
+    return await StatsCard.request(
         (time_rank, coin_rank),
         list(reversed(study_times)),
         workout_total,
         streaks,
     )
-    return await asyncio.get_event_loop().run_in_executor(executor, card.draw)
 
 
 async def get_profile_card_for(ctx: Context, target):
@@ -198,21 +198,20 @@ async def get_profile_card_for(ctx: Context, target):
     achievements = await get_achievements_for(target)
 
     # We have all the data for the profile card
-    avatar = await get_avatar(ctx.client, target.id, size=256)
-    card = ProfileCard(
+    avatar = get_avatar_key(ctx.client, target.id)
+    return await ProfileCard.request(
         target.name,
         '#{}'.format(target.discriminator),
-        avatar,
         coins,
         season_time,
+        avatar=avatar,
         answers=None,
         achievements=[i for i, ach in enumerate(achievements) if ach.level_id > 0],
         attendance=acc_rate,
         current_rank=current_rank,
         next_rank=next_rank,
-        badges=lion.profile_tags
+        badges=lion.profile_tags,
     )
-    return await asyncio.get_event_loop().run_in_executor(executor, card.draw)
 
 
 @module.cmd(
@@ -238,17 +237,27 @@ async def cmd_stats(ctx):
     else:
         target = ctx.author
 
+    start = time.time()
     # System sync
     Lion.sync()
 
     # Fetch the cards
-    profile_image = await get_profile_card_for(ctx, target)
-    stats_image = await get_stats_card_for(ctx, target)
+    futures = (
+        asyncio.create_task(get_profile_card_for(ctx, target)),
+        asyncio.create_task(get_stats_card_for(ctx, target))
+    )
+    await futures[0]
+    await futures[1]
+
+    profile_image = futures[0].result()
+    stats_image = futures[1].result()
 
     profile_file = image_as_file(profile_image, f"profile_{target.id}.png")
     stats_file = image_as_file(stats_image, f"stats_{target.id}.png")
+    end = time.time()
 
     await ctx.reply(files=[profile_file, stats_file])
+    await ctx.reply(f"Rendering complete, round trip: `{end-start}` seconds")
 
 
 @module.cmd(
