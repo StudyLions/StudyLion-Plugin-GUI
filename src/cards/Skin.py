@@ -1,4 +1,5 @@
 import time
+import logging
 
 from PIL import Image
 from ..utils import asset_path, inter_font
@@ -202,10 +203,10 @@ class Skin:
                 **self._env
             ).load()
             self.fields[name] = field
-            print(f"{name}: {field.value}")
+            # logging.debug(f"{name}: {field.value}")
         self._setup()
         end = time.time()
-        print(f"Skin loading took {end-start} seconds")
+        logging.debug(f"Skin loading took {end-start} seconds")
         return self
 
     def _setup(self):

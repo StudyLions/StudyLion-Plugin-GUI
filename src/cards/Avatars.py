@@ -1,5 +1,6 @@
 import time
 import math
+import logging
 from io import BytesIO
 import asyncio
 from cachetools import LFUCache
@@ -64,18 +65,17 @@ class Avatars:
         if avatar_hash is None:
             userid = None
         key = userid, avatar_hash, size
-        print(f"Getting avatar {key!r}")
 
         if (cached := self.cache.get(key, None)) is not None:
             result = cached
-            print("Obtained from cache")
+            logging.debug(f"Avatar {key!r} obtained from cache")
         else:
             now = time.time()
             result = await self._fetch_avatar(*key)
             if result is not None:
                 self.cache[key] = result
             diff = time.time() - now
-            print(f"Fetched in {diff}seconds")
+            logging.debug(f"Avatar {key!r} fetched from Discord CDN in {diff} seconds")
 
         return result
 

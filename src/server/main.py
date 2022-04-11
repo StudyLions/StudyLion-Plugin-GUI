@@ -1,9 +1,14 @@
 import time
 import asyncio
 import pickle
+import logging
+import uuid
+# import threading
+import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 
 from .request_routes import routes
+from .logger import requestid
 
 
 # TODO: General error handling, logging, and return paths for exceptions/null data
@@ -15,17 +20,28 @@ executor: ProcessPoolExecutor = None
 
 
 async def handle_request(reader, writer):
+    rqid = uuid.uuid4()
+    requestid.set(rqid)
+
     data = await reader.read()
     route, args, kwargs = pickle.loads(data)
-    print(f"Received request for route {route!r} with args {args!r} and kwargs {kwargs!r}")
+    logging.info(f"Received rendering request for route {route!r}")
+    logging.debug(f"Request args: {args!r}")
+    logging.debug(f"Request kwargs: {kwargs!r}")
 
     if route in routes:
         start = time.time()
-        response = await routes[route](executor, args, kwargs)
-        end = time.time()
-        print(f"Rendering request complete in {end-start} seconds.")
+        try:
+            response = await routes[route](executor, rqid, args, kwargs)
+        except Exception:
+            end = time.time()
+            logging.info(f"Rendering request completed with an exception in {end-start} seconds.")
+            response = "".encode()
+        else:
+            end = time.time()
+            logging.info(f"Rendering request complete in {end-start} seconds.")
     else:
-        print(f"Unhandled route requested {route!r}")
+        logging.warning(f"Unhandled route requested {route!r}")
         response = "".encode()
 
     writer.write(response)
@@ -34,13 +50,20 @@ async def handle_request(reader, writer):
     writer.close()
 
 
+def worker_configurer():
+    logging.info(f"Launching new pool process: {multiprocessing.current_process().name}.")
+
+
 async def main():
+    # logging_queue = multiprocessing.Manager().Queue(-1)
+    # threading.Thread(target=logger_thread, args=(logging_queue,)).start()
+
     global executor
-    executor = ProcessPoolExecutor(MAX_PROC)
+    executor = ProcessPoolExecutor(MAX_PROC, initializer=worker_configurer)
 
     server = await asyncio.start_unix_server(handle_request, PATH)
     addrs = ', '.join(str(sock.getsockname()) for sock in server.sockets)
-    print(f'Serving on sockets: {addrs}')
+    logging.info(f'Serving on sockets: {addrs}')
 
     async with server:
         await server.serve_forever()
