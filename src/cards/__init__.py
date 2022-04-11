@@ -5,5 +5,6 @@ from .stats import StatsCard, StatsSkin
 from .profile import ProfileCard, ProfileSkin
 from .goals import GoalPage, GoalSkin
 from .monthly import MonthlyStatsPage, MonthlyStatsSkin
+from .weekly import WeeklyStatsPage, WeeklyStatsSkin
 
-registered = (TestCard, StatsCard, ProfileCard, GoalPage, MonthlyStatsPage)
+registered = (TestCard, StatsCard, ProfileCard, GoalPage, MonthlyStatsPage, WeeklyStatsPage)

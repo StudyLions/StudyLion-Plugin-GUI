@@ -196,7 +196,6 @@ class Skin:
         start = time.time()
         last = start
 
-        time.sleep(10)
         self._preload()
         self.fields = {}
         for name, field_desc in self._fields.items():
@@ -228,7 +227,6 @@ def _field_property_wrapper(field_name):
             raise ValueError("Cannot read fields on unloaded Skin")
         return self.fields[field_name].value
     return _field_property
-
 
 
 def fielded(cls):
