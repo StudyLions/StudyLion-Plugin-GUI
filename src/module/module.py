@@ -1,5 +1,5 @@
 import logging
-import asyncio
+import time
 import traceback
 import discord
 
@@ -8,7 +8,7 @@ from LionModule import LionModule
 from meta import client
 from utils.ratelimits import RateLimit
 
-from ..client import EmptyResponse
+from ..client import EmptyResponse, request
 
 
 class PluginModule(LionModule):
@@ -62,7 +62,7 @@ class PluginModule(LionModule):
 
             await ctx.reply(embed=error_embed)
         except Exception:
-            super().on_exception(ctx, exception)
+            await super().on_exception(ctx, exception)
 
 
 module = PluginModule("GUI")
@@ -70,3 +70,22 @@ module = PluginModule("GUI")
 ratelimit = RateLimit(5, 30)
 
 logging.getLogger('PIL').setLevel(logging.WARNING)
+
+
+@module.launch_task
+async def ping_server(client):
+    start = time.time()
+    try:
+        await request('ping')
+    except (ConnectionError, EmptyResponse):
+        client.log(
+            "Failed to ping the rendering server!",
+            context="GUI INIT",
+            level=logging.ERROR,
+        )
+    else:
+        end = time.time()
+        client.log(
+            f"Rendering server responded in {end-start} seconds!",
+            context="GUI INIT",
+        )

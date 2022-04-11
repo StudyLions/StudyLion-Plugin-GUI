@@ -1,7 +1,9 @@
 from .Card import Card
 
 from .test import TestCard
-from .stats import StatsCard
-from .profile import ProfileCard
+from .stats import StatsCard, StatsSkin
+from .profile import ProfileCard, ProfileSkin
+from .goals import GoalPage, GoalSkin
+from .monthly import MonthlyStatsPage, MonthlyStatsSkin
 
-registered = (TestCard, StatsCard, ProfileCard)
+registered = (TestCard, StatsCard, ProfileCard, GoalPage, MonthlyStatsPage)

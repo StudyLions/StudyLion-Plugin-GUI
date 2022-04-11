@@ -5,82 +5,87 @@ from PIL import Image, ImageDraw
 from datetime import timedelta
 import datetime
 
+from .Card import Card
+from .Skin import fielded, Skin, FieldDesc
+from .Skin import AssetField, NumberField, FontField, ColourField, PointField, ComputedField, RawField, StringField
+from .Skin import AssetPathField
 
-from ..utils import asset_path, inter_font
 
+@fielded
+class MonthlyStatsSkin(Skin):
+    _env = {
+        'scale': 2  # General size scale to match background resolution
+    }
 
-class MonthlyStatsPage:
-    scale = 2
-
-    background = Image.open(asset_path('monthly/background.png')).convert('RGBA')
+    background: AssetField = 'monthly/background.png'
 
     # Header
-    title_pre_gap = int(scale * 40)
-    title_text = "STUDY HOURS"
-    title_font = inter_font('ExtraBold', size=int(scale * 76))
-    title_size = title_font.getsize(title_text)
-    title_colour = '#DDB21D'
-    title_underline_gap = int(scale * 10)
-    title_underline_width = int(scale * 5)
-    title_gap = int(scale * 10)
+    title_pre_gap: NumberField = 40
+    title_text: StringField = "STUDY HOURS"
+    title_font: FontField = ('ExtraBold', 76)
+    title_size: ComputedField = lambda skin: skin.title_font.getsize(skin.title_text)
+    title_colour: ColourField = '#DDB21D'
+    title_underline_gap: NumberField = 10
+    title_underline_width: NumberField = 5
+    title_gap: NumberField = 10
 
     # Top
-    top_grid_x = int(scale*37)
-    top_grid_y = int(scale*100)
+    top_grid_x: NumberField = 37
+    top_grid_y: NumberField = 100
 
-    top_hours_font = inter_font('Black', size=int(scale*36))
-    top_hours_colour = '#FFFFFF'
-    top_hours_bg = Image.open(asset_path('monthly/top/hours_bg.png')).convert('RGBA')
-    top_hours_sep = int(scale * 100)
+    top_hours_font: FontField = ('Black', 36)
+    top_hours_colour: ColourField = '#FFFFFF'
+    top_hours_bg: AssetField = 'monthly/top/hours_bg.png'
+    top_hours_sep: NumberField = 100
 
-    top_line_width = 20
-    top_line_colour = '#042231'
+    top_line_width: NumberField = 10
+    top_line_colour: ColourField = '#042231'
 
-    top_date_pre_gap = int(scale * 20)
-    top_date_font = inter_font('Light', size=int(scale*25))
-    top_date_colour = '#FFFFFF'
-    top_date_height = top_date_font.getsize('31')[1]
+    top_date_pre_gap: NumberField = 20
+    top_date_font: FontField = ('Light', 25)
+    top_date_colour: ColourField = '#FFFFFF'
+    top_date_height: ComputedField = lambda skin: skin.top_date_font.getsize('31')[1]
 
-    top_this_end = Image.open(asset_path('monthly/top/this_end.png')).convert('RGBA')
-    top_this_colour = '#DDB21D'
+    top_this_end: AssetField = 'monthly/top/this_end.png'
+    top_this_colour: ColourField = '#DDB21D'
 
-    top_last_end = Image.open(asset_path('monthly/top/last_end.png')).convert('RGBA')
-    top_last_colour = '#377689'
+    top_last_end: AssetField = 'monthly/top/last_end.png'
+    top_last_colour: ColourField = '#377689'
 
-    top_this_hours_font = inter_font('Light', size=int(scale * 20))
-    top_this_hours_colour = '#DDB21D'
+    top_this_hours_font: FontField = ('Light', 20)
+    top_this_hours_colour: ColourField = '#DDB21D'
 
-    top_time_bar_sep = int(scale * 7)
-    top_time_sep = int(scale * 5)
+    top_time_bar_sep: NumberField = 7
+    top_time_sep: NumberField = 5
 
-    top_last_hours_font = inter_font('Light', size=int(scale * 20))
-    top_last_hours_colour = '#5F91A1'
+    top_last_hours_font: FontField = ('Light', 20)
+    top_last_hours_colour: ColourField = '#5F91A1'
 
-    top_gap = int(scale * 40)
+    top_gap: NumberField = 40
 
-    weekdays = ('M', 'T', 'W', 'T', 'F', 'S', 'S')
+    weekdays: RawField = ('M', 'T', 'W', 'T', 'F', 'S', 'S')
 
     # Summary
-    summary_pre_gap = int(scale * 50)
+    summary_pre_gap: NumberField = 50
 
-    this_month_image = Image.open(asset_path('monthly/summary_this.png'))
-    this_month_font = inter_font('Light', size=int(scale*23))
-    this_month_colour = '#BABABA'
+    this_month_image: AssetField = 'monthly/summary_this.png'
+    this_month_font: FontField = ('Light', 23)
+    this_month_colour: ColourField = '#BABABA'
 
-    summary_sep = int(scale * 300)
+    summary_sep: NumberField = 300
 
-    last_month_image = Image.open(asset_path('monthly/summary_last.png'))
-    last_month_font = inter_font('Light', size=int(scale*23))
-    last_month_colour = '#BABABA'
+    last_month_image: AssetField = 'monthly/summary_last.png'
+    last_month_font: FontField = ('Light', 23)
+    last_month_colour: ColourField = '#BABABA'
 
-    summary_gap = int(scale * 50)
+    summary_gap: NumberField = 50
 
     # Bottom
-    bottom_frame = Image.open(asset_path('monthly/bottom/frame.png'))
-    bottom_margins = (100, 100)
+    bottom_frame: AssetField = 'monthly/bottom/frame.png'
+    bottom_margins: PointField = (100, 100)
 
-    heatmap_mask = Image.open(asset_path('monthly/bottom/blob.png')).convert('RGBA')
-    heatmap_colours = [
+    heatmap_mask: AssetField = 'monthly/bottom/blob.png'
+    heatmap_colours: RawField = [
         '#0E2A77',
         '#15357D',
         '#1D3F82',
@@ -100,42 +105,50 @@ class MonthlyStatsPage:
     ]
     heatmap_colours.reverse()
 
-    weekday_background = Image.open(asset_path('monthly/bottom/weekday.png'))
-    weekday_font = inter_font('Black', size=int(scale*26.85))
-    weekday_colour = '#FFFFFF'
-    weekday_sep = int(scale * 20)
+    weekday_background: AssetField = 'monthly/bottom/weekday.png'
+    weekday_font: FontField = ('Black', 26.85)
+    weekday_colour: ColourField = '#FFFFFF'
+    weekday_sep: NumberField = 20
 
-    month_background = Image.open(asset_path('monthly/bottom/month_bg.png'))
-    month_font = inter_font('Bold', size=int(scale*25.75))
-    month_colour = '#FFFFFF'
-    month_sep = (
-        bottom_frame.width - 2 * bottom_margins[0]
-        - weekday_background.width
-        - weekday_sep
-        - 4 * month_background.width
+    month_background: AssetField = 'monthly/bottom/month_bg.png'
+    month_font: FontField = ('Bold', 25.75)
+    month_colour: ColourField = '#FFFFFF'
+    month_sep: ComputedField = lambda skin: (
+        skin.bottom_frame.width - 2 * skin.bottom_margins[0]
+        - skin.weekday_background.width
+        - skin.weekday_sep
+        - 4 * skin.month_background.width
     ) // 3
-    month_gap = int(scale * 25)
+    month_gap: NumberField = 25
 
-    btm_frame = Image.open(asset_path('monthly/bottom/frame.png')).convert('RGBA')
-    btm_grid_x = (month_background.width - heatmap_mask.width) // 5
-    btm_grid_y = btm_grid_x
+    btm_frame: AssetField = 'monthly/bottom/frame.png'
+    btm_grid_x: ComputedField = lambda skin: (skin.month_background.width - skin.heatmap_mask.width) // 5
+    btm_grid_y: ComputedField = lambda skin: skin.btm_grid_x
 
     # Stats
-    stats_key_font = inter_font('Medium', size=int(scale*23.65))
-    stats_key_colour = '#FFFFFF'
-    stats_value_font = inter_font('Light', size=int(scale*23.65))
-    stats_value_colour = '#808080'
-    stats_sep = month_background.width + month_sep + (weekday_background.width + weekday_sep) // 3
+    stats_key_font: FontField = ('Medium', 23.65)
+    stats_key_colour: ColourField = '#FFFFFF'
+    stats_value_font: FontField = ('Light', 23.65)
+    stats_value_colour: ColourField = '#808080'
+    stats_sep: ComputedField = lambda skin: (
+        skin.month_background.width + skin.month_sep + (skin.weekday_background.width + skin.weekday_sep) // 3
+    )
 
     # Date text
-    date_font = inter_font('Bold', size=int(scale * 28))
-    date_colour = '#6f6e6f'
-    date_gap = int(scale * 50)
+    date_font: FontField = ('Bold', 28)
+    date_colour: ColourField = '#6f6e6f'
+    date_gap: NumberField = 50
+
+
+class MonthlyStatsPage(Card):
+    server_route = 'monthly_card'
 
     def __init__(self, name, discrim, sessions, date, current_streak, longest_streak, first_session_start):
         """
         `sessions` is a list of study sessions from the last two weeks.
         """
+        self.skin = MonthlyStatsSkin().load()
+
         self.data_sessions = sessions
         self.data_date = date
 
@@ -196,30 +209,30 @@ class MonthlyStatsPage:
         self.image = None
 
     def draw(self) -> Image:
-        image = self.image = self.background.copy()
+        image = self.image = self.skin.background
         draw = ImageDraw.Draw(image)
 
         xpos, ypos = 0, 0
 
         # Draw header text
-        xpos = (image.width - self.title_size[0]) // 2
-        ypos += self.title_pre_gap
+        xpos = (image.width - self.skin.title_size[0]) // 2
+        ypos += self.skin.title_pre_gap
         draw.text(
             (xpos, ypos),
-            self.title_text,
-            fill=self.title_colour,
-            font=self.title_font
+            self.skin.title_text,
+            fill=self.skin.title_colour,
+            font=self.skin.title_font
         )
 
         # Underline it
-        title_size = self.title_font.getsize(self.title_text)
-        ypos += title_size[1] + self.title_underline_gap
+        title_size = self.skin.title_font.getsize(self.skin.title_text)
+        ypos += title_size[1] + self.skin.title_underline_gap
         draw.line(
             (xpos, ypos, xpos + title_size[0], ypos),
-            fill=self.title_colour,
-            width=self.title_underline_width
+            fill=self.skin.title_colour,
+            width=self.skin.title_underline_width
         )
-        ypos += self.title_underline_width + self.title_gap
+        ypos += self.skin.title_underline_width + self.skin.title_gap
 
         # Draw the top box
         top = self.draw_top()
@@ -228,7 +241,7 @@ class MonthlyStatsPage:
             ((image.width - top.width) // 2, ypos)
         )
 
-        ypos += top.height + self.top_gap
+        ypos += top.height + self.skin.top_gap
 
         # Draw the summaries
         summary_image = self.draw_summaries()
@@ -236,7 +249,7 @@ class MonthlyStatsPage:
             summary_image,
             ((image.width - summary_image.width) // 2, ypos)
         )
-        ypos += summary_image.height + self.summary_gap
+        ypos += summary_image.height + self.skin.summary_gap
 
         # Draw the bottom box
         bottom = self.draw_bottom()
@@ -247,33 +260,33 @@ class MonthlyStatsPage:
 
         # Draw the footer
         ypos = image.height
-        ypos -= self.date_gap
+        ypos -= self.skin.date_gap
         date_text = self.data_date.strftime(
             "Monthly Statistics • As of %d %b • {} {}".format(self.data_name, self.data_discrim)
         )
-        size = self.date_font.getsize(date_text)
+        size = self.skin.date_font.getsize(date_text)
         ypos -= size[1]
         draw.text(
             ((image.width - size[0]) // 2, ypos),
             date_text,
-            font=self.date_font,
-            fill=self.date_colour
+            font=self.skin.date_font,
+            fill=self.skin.date_colour
         )
         return image
 
     def draw_summaries(self) -> Image:
         this_month_text = " THIS MONTH: {} Hours".format(int(sum(self.hours_this_month)))
-        this_month_length = int(self.this_month_font.getlength(this_month_text))
+        this_month_length = int(self.skin.this_month_font.getlength(this_month_text))
         last_month_text = " LAST MONTH: {} Hours".format(int(sum(self.hours_last_month)))
-        last_month_length = int(self.last_month_font.getlength(last_month_text))
+        last_month_length = int(self.skin.last_month_font.getlength(last_month_text))
 
         image = Image.new(
             'RGBA',
             (
-                self.this_month_image.width + this_month_length
-                + self.summary_sep
-                + self.last_month_image.width + last_month_length,
-                self.this_month_image.height
+                self.skin.this_month_image.width + this_month_length
+                + self.skin.summary_sep
+                + self.skin.last_month_image.width + last_month_length,
+                self.skin.this_month_image.height
             )
         )
         draw = ImageDraw.Draw(image)
@@ -281,94 +294,94 @@ class MonthlyStatsPage:
         xpos = 0
         ypos = image.height // 2
         image.alpha_composite(
-            self.this_month_image,
+            self.skin.this_month_image,
             (0, 0)
         )
-        xpos += self.this_month_image.width
+        xpos += self.skin.this_month_image.width
         draw.text(
             (xpos, ypos),
             this_month_text,
-            fill=self.this_month_colour,
-            font=self.this_month_font,
+            fill=self.skin.this_month_colour,
+            font=self.skin.this_month_font,
             anchor='lm'
         )
 
-        xpos += self.summary_sep + this_month_length
+        xpos += self.skin.summary_sep + this_month_length
 
         image.alpha_composite(
-            self.last_month_image,
+            self.skin.last_month_image,
             (xpos, 0)
         )
-        xpos += self.last_month_image.width
+        xpos += self.skin.last_month_image.width
         draw.text(
             (xpos, ypos),
             last_month_text,
-            fill=self.last_month_colour,
-            font=self.last_month_font,
+            fill=self.skin.last_month_colour,
+            font=self.skin.last_month_font,
             anchor='lm'
         )
         return image
 
     def draw_top(self) -> Image:
         size_x = (
-            self.top_hours_bg.width // 2 + self.top_hours_sep
-            + (self.this_month_days - 1) * self.top_grid_x + self.top_this_end.width // 2
-            + self.top_hours_bg.width // 2
+            self.skin.top_hours_bg.width // 2 + self.skin.top_hours_sep
+            + (self.this_month_days - 1) * self.skin.top_grid_x + self.skin.top_this_end.width // 2
+            + self.skin.top_hours_bg.width // 2
         )
         size_y = (
-            self.top_hours_bg.height // 2 + 4 * self.top_grid_y + self.top_date_pre_gap
-            + self.top_date_height
-            + self.top_time_bar_sep + int(self.top_this_hours_font.getlength('24 H  24 H'))
+            self.skin.top_hours_bg.height // 2 + 4 * self.skin.top_grid_y + self.skin.top_date_pre_gap
+            + self.skin.top_date_height
+            + self.skin.top_time_bar_sep + int(self.skin.top_this_hours_font.getlength('24 H  24 H'))
         )
         image = Image.new('RGBA', (size_x, size_y))
         draw = ImageDraw.Draw(image)
 
-        x0 = self.top_hours_bg.width // 2 + self.top_hours_sep
-        y0 = self.top_hours_bg.height // 2 + 4 * self.top_grid_y
-        y0 += self.top_time_bar_sep + int(self.top_this_hours_font.getlength('24 H  24 H'))
+        x0 = self.skin.top_hours_bg.width // 2 + self.skin.top_hours_sep
+        y0 = self.skin.top_hours_bg.height // 2 + 4 * self.skin.top_grid_y
+        y0 += self.skin.top_time_bar_sep + int(self.skin.top_this_hours_font.getlength('24 H  24 H'))
 
         # Draw lines and numbers
         labels = list(int(i * self.max_hour_label // 4) for i in range(0, 5))
 
-        xpos = x0 - self.top_hours_sep
+        xpos = x0 - self.skin.top_hours_sep
         ypos = y0
         for label in labels:
             draw.line(
                 ((xpos, ypos), (image.width, ypos)),
-                width=self.top_line_width,
-                fill=self.top_line_colour
+                width=self.skin.top_line_width,
+                fill=self.skin.top_line_colour
             )
 
             image.alpha_composite(
-                self.top_hours_bg,
-                (xpos - self.top_hours_bg.width // 2, ypos - self.top_hours_bg.height // 2)
+                self.skin.top_hours_bg,
+                (xpos - self.skin.top_hours_bg.width // 2, ypos - self.skin.top_hours_bg.height // 2)
             )
             text = str(label)
             draw.text(
                 (xpos, ypos),
                 text,
-                fill=self.top_hours_colour,
-                font=self.top_hours_font,
+                fill=self.skin.top_hours_colour,
+                font=self.skin.top_hours_font,
                 anchor='mm'
             )
-            ypos -= self.top_grid_y
+            ypos -= self.skin.top_grid_y
 
         # Draw dates
         xpos = x0
-        ypos = y0 + self.top_date_pre_gap
+        ypos = y0 + self.skin.top_date_pre_gap
         for i in range(1, self.this_month_days + 1):
             draw.text(
                 (xpos, ypos),
                 str(i),
-                fill=self.top_date_colour,
-                font=self.top_date_font,
+                fill=self.skin.top_date_colour,
+                font=self.skin.top_date_font,
                 anchor='mt'
             )
-            xpos += self.top_grid_x
+            xpos += self.skin.top_grid_x
 
         # Draw bars
         for i, (last_hours, this_hours) in enumerate(zip(self.hours_last_month, self.hours_this_month)):
-            xpos = x0 + i * self.top_grid_x
+            xpos = x0 + i * self.skin.top_grid_x
 
             if not (last_hours or this_hours):
                 continue
@@ -376,10 +389,10 @@ class MonthlyStatsPage:
             bar_height = 0
             for draw_last in (last_hours > this_hours, not last_hours > this_hours):
                 hours = last_hours if draw_last else this_hours
-                height = (4 * self.top_grid_y) * (hours / self.max_hour_label)
+                height = (4 * self.skin.top_grid_y) * (hours / self.max_hour_label)
                 height = int(height)
 
-                if height >= self.top_this_end.height:
+                if height >= self.skin.top_this_end.height:
                     bar = self.draw_vert_bar(height, last=draw_last)
                     bar_height = max(bar.height, bar_height)
                     image.alpha_composite(
@@ -390,7 +403,7 @@ class MonthlyStatsPage:
             # Draw text
             if bar_height:
                 text = ['{} H'.format(hours) for hours in (last_hours, this_hours) if hours]
-                text_size = self.top_this_hours_font.getsize('  '.join(text))
+                text_size = self.skin.top_this_hours_font.getsize('  '.join(text))
                 text_image = Image.new(
                     'RGBA',
                     text_size
@@ -401,16 +414,16 @@ class MonthlyStatsPage:
                     last_text = "{} H  ".format(int(last_hours))
                     text_draw.text(
                         (txpos, 0), last_text,
-                        fill=self.top_last_hours_colour,
-                        font=self.top_last_hours_font
+                        fill=self.skin.top_last_hours_colour,
+                        font=self.skin.top_last_hours_font
                     )
-                    txpos += self.top_last_hours_font.getlength('  '.join(text))
+                    txpos += self.skin.top_last_hours_font.getlength('  '.join(text))
                 if this_hours:
                     this_text = "{} H  ".format(int(this_hours))
                     text_draw.text(
                         (txpos, 0), this_text,
-                        fill=self.top_this_hours_colour,
-                        font=self.top_this_hours_font
+                        fill=self.skin.top_this_hours_colour,
+                        font=self.skin.top_this_hours_font
                     )
 
                 text_image = text_image.rotate(90, expand=True)
@@ -419,20 +432,20 @@ class MonthlyStatsPage:
                 image.alpha_composite(
                     text_image,
                     (xpos - text_image.width // 2,
-                     y0 - bar_height - self.top_time_bar_sep - text_image.height)
+                     y0 - bar_height - self.skin.top_time_bar_sep - text_image.height)
                 )
 
         return image
 
     def draw_vert_bar(self, height, last=False) -> Image:
-        image = Image.new('RGBA', (self.top_this_end.width - 1, height))
+        image = Image.new('RGBA', (self.skin.top_this_end.width - 1, height))
 
         if last:
-            end = self.top_last_end
-            colour = self.top_last_colour
+            end = self.skin.top_last_end
+            colour = self.skin.top_last_colour
         else:
-            end = self.top_this_end
-            colour = self.top_this_colour
+            end = self.skin.top_this_end
+            colour = self.skin.top_this_colour
 
         image.paste(
             end,
@@ -453,58 +466,58 @@ class MonthlyStatsPage:
         return image
 
     def draw_bottom(self) -> Image:
-        image = self.btm_frame.copy()
+        image = self.skin.btm_frame
         draw = ImageDraw.Draw(image)
 
-        xpos, ypos = self.bottom_margins
+        xpos, ypos = self.skin.bottom_margins
 
         # Draw the weekdays
-        y0 = self.month_background.height + self.month_gap
-        for i, weekday in enumerate(self.weekdays):
-            y = y0 + i * self.btm_grid_y
+        y0 = self.skin.month_background.height + self.skin.month_gap
+        for i, weekday in enumerate(self.skin.weekdays):
+            y = y0 + i * self.skin.btm_grid_y
             image.alpha_composite(
-                self.weekday_background,
+                self.skin.weekday_background,
                 (xpos, ypos + y)
             )
             draw.text(
-                (xpos + self.weekday_background.width // 2, ypos + y + self.weekday_background.height // 2),
+                (xpos + self.skin.weekday_background.width // 2, ypos + y + self.skin.weekday_background.height // 2),
                 weekday,
-                fill=self.weekday_colour,
-                font=self.weekday_font,
+                fill=self.skin.weekday_colour,
+                font=self.skin.weekday_font,
                 anchor='mm'
             )
 
         # Draw the months
-        x0 = self.weekday_background.width + self.weekday_sep
+        x0 = self.skin.weekday_background.width + self.skin.weekday_sep
         for i, date in enumerate(self.months):
             name = date.strftime('%B').upper()
 
-            x = x0 + i * (self.month_background.width + self.month_sep)
+            x = x0 + i * (self.skin.month_background.width + self.skin.month_sep)
             image.alpha_composite(
-                self.month_background,
+                self.skin.month_background,
                 (xpos + x, ypos)
             )
             draw.text(
-                (xpos + x + self.month_background.width // 2,
-                 ypos + self.month_background.height // 2),
+                (xpos + x + self.skin.month_background.width // 2,
+                 ypos + self.skin.month_background.height // 2),
                 name,
-                fill=self.month_colour,
-                font=self.month_font,
+                fill=self.skin.month_colour,
+                font=self.skin.month_font,
                 anchor='mm'
             )
 
             heatmap = self.draw_month_heatmap(date)
             image.alpha_composite(
                 heatmap,
-                (xpos + x + self.month_background.width // 2 - heatmap.width // 2, ypos + y0)
+                (xpos + x + self.skin.month_background.width // 2 - heatmap.width // 2, ypos + y0)
             )
 
         # Draw the streak and stats information
-        x = xpos + self.weekday_background.width // 2
-        y = image.height - self.bottom_margins[1]
+        x = xpos + self.skin.weekday_background.width // 2
+        y = image.height - self.skin.bottom_margins[1]
 
         key_text = "Current streak: "
-        key_len = self.stats_key_font.getlength(key_text)
+        key_len = self.skin.stats_key_font.getlength(key_text)
         value_text = "{} day{}".format(
             self.current_streak,
             's' if self.current_streak != 1 else ''
@@ -512,19 +525,19 @@ class MonthlyStatsPage:
         draw.text(
             (x, y),
             key_text,
-            font=self.stats_key_font,
-            fill=self.stats_key_colour
+            font=self.skin.stats_key_font,
+            fill=self.skin.stats_key_colour
         )
         draw.text(
             (x + key_len, y),
             value_text,
-            font=self.stats_value_font,
-            fill=self.stats_value_colour
+            font=self.skin.stats_value_font,
+            fill=self.skin.stats_value_colour
         )
-        x += self.stats_sep
+        x += self.skin.stats_sep
 
         key_text = "Daily average: "
-        key_len = self.stats_key_font.getlength(key_text)
+        key_len = self.skin.stats_key_font.getlength(key_text)
         value_text = "{} hour{}".format(
             (hours := int(self.average_time // 3600)),
             's' if hours != 1 else ''
@@ -532,19 +545,19 @@ class MonthlyStatsPage:
         draw.text(
             (x, y),
             key_text,
-            font=self.stats_key_font,
-            fill=self.stats_key_colour
+            font=self.skin.stats_key_font,
+            fill=self.skin.stats_key_colour
         )
         draw.text(
             (x + key_len, y),
             value_text,
-            font=self.stats_value_font,
-            fill=self.stats_value_colour
+            font=self.skin.stats_value_font,
+            fill=self.skin.stats_value_colour
         )
-        x += self.stats_sep
+        x += self.skin.stats_sep
 
         key_text = "Longest streak: "
-        key_len = self.stats_key_font.getlength(key_text)
+        key_len = self.skin.stats_key_font.getlength(key_text)
         value_text = "{} day{}".format(
             self.longest_streak,
             's' if self.current_streak != 1 else ''
@@ -552,35 +565,35 @@ class MonthlyStatsPage:
         draw.text(
             (x, y),
             key_text,
-            font=self.stats_key_font,
-            fill=self.stats_key_colour
+            font=self.skin.stats_key_font,
+            fill=self.skin.stats_key_colour
         )
         draw.text(
             (x + key_len, y),
             value_text,
-            font=self.stats_value_font,
-            fill=self.stats_value_colour
+            font=self.skin.stats_value_font,
+            fill=self.skin.stats_value_colour
         )
-        x += self.stats_sep
+        x += self.skin.stats_sep
 
         key_text = "Days learned: "
-        key_len = self.stats_key_font.getlength(key_text)
+        key_len = self.skin.stats_key_font.getlength(key_text)
         value_text = "{}%".format(
             int((100 * self.days_learned) // self.days_since_start)
         )
         draw.text(
             (x, y),
             key_text,
-            font=self.stats_key_font,
-            fill=self.stats_key_colour
+            font=self.skin.stats_key_font,
+            fill=self.skin.stats_key_colour
         )
         draw.text(
             (x + key_len, y),
             value_text,
-            font=self.stats_value_font,
-            fill=self.stats_value_colour
+            font=self.skin.stats_value_font,
+            fill=self.skin.stats_value_colour
         )
-        x += self.stats_sep
+        x += self.skin.stats_sep
 
         return image
 
@@ -589,23 +602,23 @@ class MonthlyStatsPage:
         columns = len(cal)
 
         size_x = (
-            (columns - 1) * self.btm_grid_x
-            + self.heatmap_mask.width
+            (columns - 1) * self.skin.btm_grid_x
+            + self.skin.heatmap_mask.width
         )
         size_y = (
-            6 * self.btm_grid_y + self.heatmap_mask.height
+            6 * self.skin.btm_grid_y + self.skin.heatmap_mask.height
         )
 
         image = Image.new('RGBA', (size_x, size_y))
 
-        x0 = self.heatmap_mask.width // 2
-        y0 = self.heatmap_mask.height // 2
+        x0 = self.skin.heatmap_mask.width // 2
+        y0 = self.skin.heatmap_mask.height // 2
 
         for (i, week) in enumerate(cal):
-            xpos = x0 + i * self.btm_grid_x
+            xpos = x0 + i * self.skin.btm_grid_x
             for (j, day) in enumerate(week):
                 if day:
-                    ypos = y0 + j * self.btm_grid_y
+                    ypos = y0 + j * self.skin.btm_grid_y
                     date = datetime.date(month_start.year, month_start.month, day)
                     time = self.data_time[date]
                     bubble = self.draw_bubble(time)
@@ -619,12 +632,12 @@ class MonthlyStatsPage:
     def draw_bubble(self, time):
         # Calculate colour level
         if time == 0:
-            return self.heatmap_mask
+            return self.skin.heatmap_mask
         else:
             amount = min(time / self.average_time, 2) / 2
-            index = math.ceil(amount * len(self.heatmap_colours)) - 1
-            colour = self.heatmap_colours[index]
+            index = math.ceil(amount * len(self.skin.heatmap_colours)) - 1
+            colour = self.skin.heatmap_colours[index]
 
-            image = Image.new('RGBA', self.heatmap_mask.size)
-            image.paste(colour, mask=self.heatmap_mask)
+            image = Image.new('RGBA', self.skin.heatmap_mask.size)
+            image.paste(colour, mask=self.skin.heatmap_mask)
             return image

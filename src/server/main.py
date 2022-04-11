@@ -36,18 +36,22 @@ async def handle_request(reader, writer):
         except Exception:
             end = time.time()
             logging.info(f"Rendering request completed with an exception in {end-start} seconds.")
-            response = "".encode()
+            response = b''
         else:
             end = time.time()
             logging.info(f"Rendering request complete in {end-start} seconds.")
     else:
         logging.warning(f"Unhandled route requested {route!r}")
-        response = "".encode()
+        response = b''
 
+    logging.debug(f"Response is {len(response)} bytes")
     writer.write(response)
     writer.write_eof()
+
     await writer.drain()
+
     writer.close()
+    await writer.wait_closed()
 
 
 def worker_configurer():
@@ -60,6 +64,8 @@ async def main():
 
     global executor
     executor = ProcessPoolExecutor(MAX_PROC, initializer=worker_configurer)
+    for i in range(MAX_PROC):
+        executor.submit(worker_configurer)
 
     server = await asyncio.start_unix_server(handle_request, PATH)
     addrs = ', '.join(str(sock.getsockname()) for sock in server.sockets)

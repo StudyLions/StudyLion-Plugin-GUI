@@ -1,145 +1,158 @@
 import math
-from datetime import datetime
-from PIL import Image, ImageFont, ImageDraw, ImageOps
-from ..utils import asset_path, inter_font
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageOps
+
+from .Card import Card
+from .Skin import fielded, Skin, FieldDesc
+from .Skin import AssetField, AssetPathField, StringField, NumberField, FontField, ColourField, PointField, ComputedField
+from .Avatars import avatar_manager
 
 
-class GoalPage:
-    scale = 2
+@fielded
+class GoalSkin(Skin):
+    _env = {
+        'scale': 2  # General size scale to match background resolution
+    }
 
-    background = Image.open(asset_path("goals/background.png")).convert('RGBA')
+    background: AssetField = "goals/background.png"
 
-    week_help_frame = Image.open(asset_path("weekly/help_frame.png")).convert('RGBA')
-    month_help_frame = Image.open(asset_path("monthly/help_frame.png")).convert('RGBA')
+    week_help_frame: AssetPathField = "weekly/help_frame.png"
+    month_help_frame: AssetPathField = "monthly/help_frame.png"
 
     # Title section
-    title_pre_gap = int(scale * 40)
-    title_text = "MONTHLY STATISTICS"
-    title_font = inter_font('ExtraBold', size=int(scale * 76))
-    title_size = title_font.getsize(title_text)
-    title_colour = '#DDB21D'
-    title_underline_gap = int(scale * 10)
-    title_underline_width = int(scale * 5)
-    title_gap = int(scale * 50)
+    title_pre_gap: NumberField = 40
+    title_text: StringField = "MONTHLY STATISTICS"
+    title_font: FontField = ('ExtraBold', 76)
+    title_size: ComputedField = lambda skin: skin.title_font.getsize(skin.title_text)
+    title_colour: ColourField = '#DDB21D'
+    title_underline_gap: NumberField = 10
+    title_underline_width: NumberField = 5
+    title_gap: NumberField = 50
 
     # Profile section
-    profile_indent = int(scale * 125)
-    profile_size = (
-        background.width - 2 * profile_indent,
-        int(scale * 200)
+    profile_indent: NumberField = 125
+    profile_size: ComputedField = lambda skin: (
+        skin.background.width - 2 * skin.profile_indent,
+        int(skin._env['scale'] * 200)
     )
 
-    avatar_mask = Image.open(asset_path("tasklist/first/avatar_mask.png"))
-    avatar_frame = Image.open(asset_path("tasklist/first/avatar_frame.png"))
-    avatar_sep = int(scale * 50)
+    avatar_mask: AssetField = FieldDesc(AssetField, 'tasklist/first/avatar_mask.png', convert=None)
+    avatar_frame: AssetField = FieldDesc(AssetField, 'tasklist/first/avatar_frame.png', convert=None)
+    avatar_sep: NumberField = 50
 
-    name_font = inter_font('BoldItalic', size=int(scale*55))
-    name_colour = '#DDB21D'
-    discrim_font = name_font
-    discrim_colour = '#BABABA'
-    name_gap = int(scale * 20)
+    name_font: FontField = ('BoldItalic', 55)
+    name_colour: ColourField = '#DDB21D'
+    discrim_font: FontField = name_font
+    discrim_colour: ColourField = '#BABABA'
+    name_gap: NumberField = 20
 
-    badge_end = Image.open(asset_path("tasklist/first/badge_end.png"))
-    badge_font = inter_font('Black', size=int(scale*30))
-    badge_colour = '#FFFFFF'
-    badge_text_colour = '#051822'
-    badge_gap = int(scale * 20)
-    badge_min_sep = int(scale * 10)
+    badge_end: AssetField = "tasklist/first/badge_end.png"
+    badge_font: FontField = ('Black', 30)
+    badge_colour: ColourField = '#FFFFFF'
+    badge_text_colour: ColourField = '#051822'
+    badge_gap: NumberField = 20
+    badge_min_sep: NumberField = 10
 
     # Progress bars
-    progress_bg = Image.open(asset_path('goals/progress_bg.png'))
-    progress_mask = ImageOps.invert(progress_bg.split()[-1].convert('L'))
-    progress_end = Image.open(asset_path('goals/progress_end.png'))
+    progress_bg: AssetField = 'goals/progress_bg.png'
+    progress_mask: ComputedField = lambda skin: ImageOps.invert(skin.progress_bg.split()[-1].convert('L'))
+    progress_end: AssetField = 'goals/progress_end.png'
 
-    line_gap = int(scale * 5)
-    progress_text_at = 7 * (progress_bg.height // 10)
+    line_gap: NumberField = 5
+    progress_text_at: ComputedField = lambda skin: 7 * (skin.progress_bg.height // 10)
 
-    task_count_font = inter_font('Bold', size=int(scale*76))
-    task_count_colour = '#DDB21D'
-    task_done_font = inter_font('Bold', size=int(scale*37))
-    task_done_colour = '#FFFFFF'
-    task_goal_font = inter_font('Bold', size=int(scale*27))
-    task_goal_colour = '#FFFFFF'
-    task_goal_number_font = inter_font('Light', size=int(scale*27))
-    task_goal_number_colour = '#FFFFFF'
-    task_text_size = (
-        task_count_font.getsize("00")[0]
-        + task_done_font.getsize("TASKS DONE")[0]
-        + task_goal_font.getsize("GOAL")[0]
-        + 3 * line_gap,
-        task_done_font.getsize("TASKS DONE")[1]
+    task_count_font: FontField = ('Bold', 76)
+    task_count_colour: ColourField = '#DDB21D'
+    task_done_font: FontField = ('Bold', 37)
+    task_done_colour: ColourField = '#FFFFFF'
+    task_goal_font: FontField = ('Bold', 27)
+    task_goal_colour: ColourField = '#FFFFFF'
+    task_goal_number_font: FontField = ('Light', 27)
+    task_goal_number_colour: ColourField = '#FFFFFF'
+    task_text_size: ComputedField = lambda skin: (
+        skin.task_count_font.getsize("00")[0]
+        + skin.task_done_font.getsize("TASKS DONE")[0]
+        + skin.task_goal_font.getsize("GOAL")[0]
+        + 3 * skin.line_gap,
+        skin.task_done_font.getsize("TASKS DONE")[1]
     )
-    task_progress_text_height = (
-        task_count_font.getsize('100')[1] +
-        task_done_font.getsize('TASKS DONE')[1] +
-        task_goal_font.getsize('GOAL')[1] +
-        2 * line_gap
-    )
-
-    attendance_rate_font = inter_font('Bold', size=int(scale*76))
-    attendance_rate_colour = '#DDB21D'
-    attendance_font = inter_font('Bold', size=int(scale*37))
-    attendance_colour = '#FFFFFF'
-    attendance_text_height = (
-        attendance_rate_font.getsize('100%')[1] +
-        attendance_font.getsize('ATTENDANCE')[1] * 2 +
-        2 * line_gap
+    task_progress_text_height: ComputedField = lambda skin: (
+        skin.task_count_font.getsize('100')[1] +
+        skin.task_done_font.getsize('TASKS DONE')[1] +
+        skin.task_goal_font.getsize('GOAL')[1] +
+        2 * skin.line_gap
     )
 
-    studied_text_font = inter_font('Bold', size=int(scale*37))
-    studied_text_colour = '#FFFFFF'
-    studied_hour_font = inter_font('Bold', size=int(scale*60))
-    studied_hour_colour = '#DDB21D'
-    studied_text_height = (
-        studied_text_font.getsize('STUDIED')[1] * 2
-        + studied_hour_font.getsize('400')[1]
-        + 2 * line_gap
+    attendance_rate_font: FontField = ('Bold', 76)
+    attendance_rate_colour: ColourField = '#DDB21D'
+    attendance_font: FontField = ('Bold', 37)
+    attendance_colour: ColourField = '#FFFFFF'
+    attendance_text_height: ComputedField = lambda skin: (
+        skin.attendance_rate_font.getsize('100%')[1] +
+        skin.attendance_font.getsize('ATTENDANCE')[1] * 2 +
+        2 * skin.line_gap
     )
 
-    progress_gap = int(scale * 50)
+    studied_text_font: FontField = ('Bold', 37)
+    studied_text_colour: ColourField = '#FFFFFF'
+    studied_hour_font: FontField = ('Bold', 60)
+    studied_hour_colour: ColourField = '#DDB21D'
+    studied_text_height: ComputedField = lambda skin: (
+        skin.studied_text_font.getsize('STUDIED')[1] * 2
+        + skin.studied_hour_font.getsize('400')[1]
+        + 2 * skin.line_gap
+    )
+
+    progress_gap: NumberField = 50
 
     # Tasks
-    task_frame = Image.open(asset_path("goals/task_frame.png"))
-    task_margin = (100, 50)
-    task_column_sep = int(scale * 100)
+    task_frame: AssetField = "goals/task_frame.png"
+    task_margin: PointField = (100, 50)
+    task_column_sep: NumberField = 100
 
-    task_header_font = inter_font('Black', size=int(scale*50))
-    task_header_colour = '#DDB21D'
-    task_header_gap = int(scale * 25)
-    task_underline_gap = int(scale * 10)
-    task_underline_width = int(scale * 5)
+    task_header_font: FontField = ('Black', 50)
+    task_header_colour: ColourField = '#DDB21D'
+    task_header_gap: NumberField = 25
+    task_underline_gap: NumberField = 10
+    task_underline_width: NumberField = 5
 
-    task_done_number_bg = Image.open(asset_path("goals/done.png")).convert('RGBA')
-    task_done_number_font = inter_font('Regular', size=int(scale * 28))
-    task_done_number_colour = '#292828'
+    task_done_number_bg: AssetField = "goals/done.png"
+    task_done_number_font: FontField = ('Regular', 28)
+    task_done_number_colour: ColourField = '#292828'
 
-    task_done_text_font = inter_font('Regular', size=int(scale * 35))
-    task_done_text_colour = '#686868'
+    task_done_text_font: FontField = ('Regular', 35)
+    task_done_text_colour: ColourField = '#686868'
 
-    task_done_line_width = 7
+    task_done_line_width: NumberField = FieldDesc(NumberField, 7, scaled=False)
 
-    task_undone_number_bg = Image.open(asset_path("goals/undone.png")).convert('RGBA')
-    task_undone_number_font = inter_font('Regular', size=int(scale * 28))
-    task_undone_number_colour = '#FFFFFF'
+    task_undone_number_bg: AssetField = "goals/undone.png"
+    task_undone_number_font: FontField = ('Regular', 28)
+    task_undone_number_colour: ColourField = '#FFFFFF'
 
-    task_undone_text_font = inter_font('Regular', size=int(scale * 35))
-    task_undone_text_colour = '#FFFFFF'
+    task_undone_text_font: FontField = ('Regular', 35)
+    task_undone_text_colour: ColourField = '#FFFFFF'
 
-    task_text_height = task_done_text_font.getsize('TASK')[1]
-    task_num_sep = int(scale * 15)
-    task_inter_gap = int(scale * 25)
+    task_text_height: ComputedField = lambda skin: skin.task_done_text_font.getsize('TASK')[1]
+    task_num_sep: NumberField = 15
+    task_inter_gap: NumberField = 25
 
     # Date text
-    date_pre_gap = int(scale * 25)
-    date_font = inter_font('Bold', size=int(scale * 28))
-    date_colour = '#6f6e6f'
-    date_gap = int(scale * 50)
+    date_pre_gap: NumberField = 25
+    date_font: FontField = ('Bold', 28)
+    date_colour: ColourField = '#6f6e6f'
+    date_gap: NumberField = 50
+
+
+class GoalPage(Card):
+    server_route = "goal_card"
 
     def __init__(self,
                  name, discrim, avatar, badges,
                  tasks_done, studied_hours, attendance,
                  tasks_goal, studied_goal, goals,
                  date, month=False):
+        self.skin = GoalSkin().load()
+
         self.data_name = name
         self.data_discrim = discrim
         self.data_avatar = avatar
@@ -161,36 +174,49 @@ class GoalPage:
         else:
             self.title_text = "WEEKLY STATISTICS"
             self.task_header = "GOALS OF THE WEEK"
-        self.title_size = self.title_font.getsize(self.title_text)
+        self.title_size = self.skin.title_font.getsize(self.title_text)
+
+    @classmethod
+    async def card_route(cls, executor, requestid, args, kwargs):
+        kwargs['avatar'] = await avatar_manager().get_avatar(*kwargs['avatar'], 256)
+        return await super().card_route(executor, requestid, args, kwargs)
+
+    @classmethod
+    def _execute(cls, *args, **kwargs):
+        with BytesIO(kwargs['avatar']) as image_data:
+            with Image.open(image_data).convert('RGBA') as avatar_image:
+                kwargs['avatar'] = avatar_image
+                return super()._execute(*args, **kwargs)
+
 
     def draw(self) -> Image:
-        image = self.background.copy()
+        image = self.skin.background
         draw = ImageDraw.Draw(image)
 
         xpos, ypos = 0, 0
 
         # Draw header text
         xpos = (image.width - self.title_size[0]) // 2
-        ypos += self.title_pre_gap
+        ypos += self.skin.title_pre_gap
         draw.text(
             (xpos, ypos),
             self.title_text,
-            fill=self.title_colour,
-            font=self.title_font
+            fill=self.skin.title_colour,
+            font=self.skin.title_font
         )
 
         # Underline it
-        title_size = self.title_font.getsize(self.title_text)
-        ypos += title_size[1] + self.title_underline_gap
+        title_size = self.skin.title_font.getsize(self.title_text)
+        ypos += title_size[1] + self.skin.title_underline_gap
         draw.line(
             (xpos, ypos, xpos + title_size[0], ypos),
-            fill=self.title_colour,
-            width=self.title_underline_width
+            fill=self.skin.title_colour,
+            width=self.skin.title_underline_width
         )
-        ypos += self.title_underline_width + self.title_gap
+        ypos += self.skin.title_underline_width + self.skin.title_gap
 
         # Draw the profile
-        xpos = self.profile_indent
+        xpos = self.skin.profile_indent
         profile = self._draw_profile()
         image.alpha_composite(
             profile,
@@ -201,17 +227,17 @@ class GoalPage:
         ypos = image.height
 
         # Draw the date text
-        ypos -= self.date_gap
+        ypos -= self.skin.date_gap
         date_text = self.data_date.strftime("As of %d %b • {} {}".format(self.data_name, self.data_discrim))
-        size = self.date_font.getsize(date_text)
+        size = self.skin.date_font.getsize(date_text)
         ypos -= size[1]
         draw.text(
             ((image.width - size[0]) // 2, ypos),
             date_text,
-            font=self.date_font,
-            fill=self.date_colour
+            font=self.skin.date_font,
+            fill=self.skin.date_colour
         )
-        ypos -= self.date_pre_gap
+        ypos -= self.skin.date_pre_gap
 
         if self.data_goals or self.data_tasks_goal or self.data_studied_goal:
             # Draw the tasks
@@ -225,16 +251,16 @@ class GoalPage:
 
             # Draw the progress bars
             progress_image = self._draw_progress()
-            ypos -= progress_image.height + self.progress_gap
+            ypos -= progress_image.height + self.skin.progress_gap
             image.alpha_composite(
                 progress_image,
                 ((image.width - progress_image.width) // 2, ypos)
             )
         else:
             if self.data_month:
-                help_frame = self.month_help_frame
+                help_frame = Image.open(self.skin.month_help_frame).convert('RGBA')
             else:
-                help_frame = self.week_help_frame
+                help_frame = Image.open(self.skin.week_help_frame).convert('RGBA')
 
             ypos -= help_frame.height
             image.alpha_composite(
@@ -245,40 +271,40 @@ class GoalPage:
         return image
 
     def _draw_tasks(self):
-        image = self.task_frame.copy()
+        image = self.skin.task_frame
         draw = ImageDraw.Draw(image)
 
         # Task container is smaller than frame
-        xpos, ypos = self.task_margin
+        xpos, ypos = self.skin.task_margin
 
         # Draw header text
         draw.text(
             (xpos, ypos),
             self.task_header,
-            fill=self.task_header_colour,
-            font=self.task_header_font
+            fill=self.skin.task_header_colour,
+            font=self.skin.task_header_font
         )
 
         # Underline it
-        title_size = self.task_header_font.getsize(self.task_header)
-        ypos += title_size[1] + self.task_underline_gap
+        title_size = self.skin.task_header_font.getsize(self.task_header)
+        ypos += title_size[1] + self.skin.task_underline_gap
         draw.line(
             (xpos, ypos, xpos + title_size[0], ypos),
-            fill=self.task_header_colour,
-            width=self.task_underline_width
+            fill=self.skin.task_header_colour,
+            width=self.skin.task_underline_width
         )
-        ypos += self.task_underline_width + self.task_header_gap
+        ypos += self.skin.task_underline_width + self.skin.task_header_gap
 
         if len(self.data_goals) > 5:
             # Split remaining space into two boxes
             task_box_1 = Image.new(
                 'RGBA',
-                (image.width // 2 - self.task_margin[0] - self.task_column_sep // 2,
+                (image.width // 2 - self.skin.task_margin[0] - self.skin.task_column_sep // 2,
                  image.height - ypos)
             )
             task_box_2 = Image.new(
                 'RGBA',
-                (image.width // 2 - self.task_margin[0] - self.task_column_sep // 2,
+                (image.width // 2 - self.skin.task_margin[0] - self.skin.task_column_sep // 2,
                  image.height - ypos)
             )
             self._draw_tasks_into(self.data_goals[:5], task_box_1)
@@ -289,12 +315,12 @@ class GoalPage:
             )
             image.alpha_composite(
                 task_box_2,
-                (xpos + task_box_1.width + self.task_column_sep, ypos)
+                (xpos + task_box_1.width + self.skin.task_column_sep, ypos)
             )
         else:
             task_box = Image.new(
                 'RGBA',
-                (image.width - 2 * self.task_margin[0], image.height)
+                (image.width - 2 * self.skin.task_margin[0], image.height)
             )
             self._draw_tasks_into(self.data_goals, task_box)
             image.alpha_composite(
@@ -304,9 +330,9 @@ class GoalPage:
         return image
 
     def _draw_progress(self):
-        image = Image.new('RGBA', (self.background.width, self.progress_bg.height))
+        image = Image.new('RGBA', (self.skin.background.width, self.skin.progress_bg.height))
 
-        sep = (self.background.width - 3 * self.progress_bg.width) // 4
+        sep = (self.skin.background.width - 3 * self.skin.progress_bg.width) // 4
 
         xpos = sep
         image.alpha_composite(
@@ -314,13 +340,13 @@ class GoalPage:
             (xpos, 0)
         )
 
-        xpos += self.progress_bg.width + sep
+        xpos += self.skin.progress_bg.width + sep
         image.alpha_composite(
             self._draw_study_progress(),
             (xpos, 0)
         )
 
-        xpos += self.progress_bg.width + sep
+        xpos += self.skin.progress_bg.width + sep
         image.alpha_composite(
             self._draw_attendance(),
             (xpos, 0)
@@ -338,45 +364,45 @@ class GoalPage:
         draw = ImageDraw.Draw(progress_image)
 
         # Draw text into the bar
-        ypos = self.progress_text_at - self.task_progress_text_height
+        ypos = self.skin.progress_text_at - self.skin.task_progress_text_height
         xpos = progress_image.width // 2
 
         text = str(self.data_tasks_done)
         draw.text(
             (xpos, ypos),
             text,
-            font=self.task_count_font,
-            fill=self.task_count_colour,
+            font=self.skin.task_count_font,
+            fill=self.skin.task_count_colour,
             anchor='mt'
         )
-        ypos += self.task_count_font.getsize(text)[1] + self.line_gap
+        ypos += self.skin.task_count_font.getsize(text)[1] + self.skin.line_gap
 
         text = "TASKS DONE"
         draw.text(
             (xpos, ypos),
             text,
-            font=self.task_done_font,
-            fill=self.task_done_colour,
+            font=self.skin.task_done_font,
+            fill=self.skin.task_done_colour,
             anchor='mt'
         )
-        ypos += self.task_done_font.getsize(text)[1] + self.line_gap
+        ypos += self.skin.task_done_font.getsize(text)[1] + self.skin.line_gap
 
         text1 = "GOAL: "
-        length1 = self.task_goal_font.getlength(text1)
+        length1 = self.skin.task_goal_font.getlength(text1)
         text2 = str(self.data_tasks_goal) if self.data_tasks_goal else "N/A"
-        length2 = self.task_goal_number_font.getlength(text2)
+        length2 = self.skin.task_goal_number_font.getlength(text2)
         draw.text(
             (xpos - length2 // 2, ypos),
             text1,
-            font=self.task_goal_font,
-            fill=self.task_goal_colour,
+            font=self.skin.task_goal_font,
+            fill=self.skin.task_goal_colour,
             anchor='mt'
         )
         draw.text(
             (xpos + length1 // 2, ypos),
             text2,
-            font=self.task_goal_number_font,
-            fill=self.task_goal_number_colour,
+            font=self.skin.task_goal_number_font,
+            fill=self.skin.task_goal_number_colour,
             anchor='mt'
         )
         return progress_image
@@ -390,18 +416,18 @@ class GoalPage:
         progress_image = self._draw_progress_bar(amount)
         draw = ImageDraw.Draw(progress_image)
 
-        ypos = self.progress_text_at - self.studied_text_height
+        ypos = self.skin.progress_text_at - self.skin.studied_text_height
         xpos = progress_image.width // 2
 
         text = "STUDIED"
         draw.text(
             (xpos, ypos),
             text,
-            font=self.studied_text_font,
-            fill=self.studied_text_colour,
+            font=self.skin.studied_text_font,
+            fill=self.skin.studied_text_colour,
             anchor='mt'
         )
-        ypos += self.studied_text_font.getsize(text)[1] + self.line_gap
+        ypos += self.skin.studied_text_font.getsize(text)[1] + self.skin.line_gap
 
         if self.data_studied_goal:
             text = f"{self.data_studied_hours}/{self.data_studied_goal}"
@@ -410,18 +436,18 @@ class GoalPage:
         draw.text(
             (xpos, ypos),
             text,
-            font=self.studied_hour_font,
-            fill=self.studied_hour_colour,
+            font=self.skin.studied_hour_font,
+            fill=self.skin.studied_hour_colour,
             anchor='mt'
         )
-        ypos += self.studied_hour_font.getsize(text)[1] + self.line_gap
+        ypos += self.skin.studied_hour_font.getsize(text)[1] + self.skin.line_gap
 
         text = "HOURS"
         draw.text(
             (xpos, ypos),
             text,
-            font=self.studied_text_font,
-            fill=self.studied_text_colour,
+            font=self.skin.studied_text_font,
+            fill=self.skin.studied_text_colour,
             anchor='mt'
         )
         return progress_image
@@ -432,7 +458,7 @@ class GoalPage:
         progress_image = self._draw_progress_bar(amount)
         draw = ImageDraw.Draw(progress_image)
 
-        ypos = self.progress_text_at - self.attendance_text_height
+        ypos = self.skin.progress_text_at - self.skin.attendance_text_height
         xpos = progress_image.width // 2
 
         if self.data_attendance is not None:
@@ -442,120 +468,120 @@ class GoalPage:
         draw.text(
             (xpos, ypos),
             text,
-            font=self.attendance_rate_font,
-            fill=self.attendance_rate_colour,
+            font=self.skin.attendance_rate_font,
+            fill=self.skin.attendance_rate_colour,
             anchor='mt'
         )
-        ypos += self.attendance_rate_font.getsize(text)[1] + self.line_gap
+        ypos += self.skin.attendance_rate_font.getsize(text)[1] + self.skin.line_gap
 
         text = "ATTENDANCE"
         draw.text(
             (xpos, ypos),
             text,
-            font=self.attendance_font,
-            fill=self.attendance_colour,
+            font=self.skin.attendance_font,
+            fill=self.skin.attendance_colour,
             anchor='mt'
         )
-        ypos += self.attendance_font.getsize(text)[1] + self.line_gap
+        ypos += self.skin.attendance_font.getsize(text)[1] + self.skin.line_gap
 
         text = "RATE"
         draw.text(
             (xpos, ypos),
             text,
-            font=self.attendance_font,
-            fill=self.attendance_colour,
+            font=self.skin.attendance_font,
+            fill=self.skin.attendance_colour,
             anchor='mt'
         )
         return progress_image
 
     def _draw_profile(self) -> Image:
-        image = Image.new('RGBA', self.profile_size)
+        image = Image.new('RGBA', self.skin.profile_size)
         draw = ImageDraw.Draw(image)
         xpos, ypos = 0, 0
 
         # Draw avatar
         avatar = self.data_avatar
-        avatar.paste((0, 0, 0, 0), mask=self.avatar_mask)
+        avatar.paste((0, 0, 0, 0), mask=self.skin.avatar_mask)
         avatar_image = Image.new('RGBA', (264, 264))
         avatar_image.paste(avatar, (3, 4))
-        avatar_image.alpha_composite(self.avatar_frame)
-        avatar_image = avatar_image.resize((self.profile_size[1], self.profile_size[1]))
+        avatar_image.alpha_composite(self.skin.avatar_frame)
+        avatar_image = avatar_image.resize((self.skin.profile_size[1], self.skin.profile_size[1]))
         image.alpha_composite(avatar_image, (0, 0))
 
-        xpos += avatar_image.width + self.avatar_sep
+        xpos += avatar_image.width + self.skin.avatar_sep
 
         # Draw name
         name_text = self.data_name
-        name_length = self.name_font.getlength(name_text + ' ')
-        name_height = self.name_font.getsize(name_text)[1]
+        name_length = self.skin.name_font.getlength(name_text + ' ')
+        name_height = self.skin.name_font.getsize(name_text)[1]
         draw.text(
             (xpos, ypos),
             name_text,
-            fill=self.name_colour,
-            font=self.name_font
+            fill=self.skin.name_colour,
+            font=self.skin.name_font
         )
         draw.text(
             (xpos + name_length, ypos),
             self.data_discrim,
-            fill=self.discrim_colour,
-            font=self.discrim_font
+            fill=self.skin.discrim_colour,
+            font=self.skin.discrim_font
         )
-        ypos += name_height + self.name_gap
+        ypos += name_height + self.skin.name_gap
 
         # Draw badges
         _x = 0
-        max_x = self.profile_size[0] - xpos
+        max_x = self.skin.profile_size[0] - xpos
 
         badges = [self._draw_badge(text) for text in self.data_badges]
         for badge in badges:
             if badge.width + _x > max_x:
                 _x = 0
-                ypos += badge.height + self.badge_gap
+                ypos += badge.height + self.skin.badge_gap
             image.paste(
                 badge,
                 (xpos + _x, ypos)
             )
-            _x += badge.width + self.badge_min_sep
+            _x += badge.width + self.skin.badge_min_sep
         return image
 
     def _draw_badge(self, text) -> Image:
         """
         Draw a single profile badge, with the given text.
         """
-        text_length = self.badge_font.getsize(text)[0]
+        text_length = self.skin.badge_font.getsize(text)[0]
 
-        height = self.badge_end.height
-        width = text_length + self.badge_end.width
+        height = self.skin.badge_end.height
+        width = text_length + self.skin.badge_end.width
 
         badge = Image.new('RGBA', (width, height), color=(0, 0, 0, 0))
 
         # Add blobs to ends
         badge.paste(
-            self.badge_end,
+            self.skin.badge_end,
             (0, 0)
         )
         badge.paste(
-            self.badge_end,
-            (width - self.badge_end.width, 0)
+            self.skin.badge_end,
+            (width - self.skin.badge_end.width, 0)
         )
 
         # Add rectangle to middle
         draw = ImageDraw.Draw(badge)
         draw.rectangle(
             (
-                (self.badge_end.width // 2, 0),
-                (width - self.badge_end.width // 2, height),
+                (self.skin.badge_end.width // 2, 0),
+                (width - self.skin.badge_end.width // 2, height),
             ),
-            fill=self.badge_colour,
+            fill=self.skin.badge_colour,
             width=0
         )
 
         # Write badge text
         draw.text(
-            (self.badge_end.width // 2, height // 2),
+            (self.skin.badge_end.width // 2, height // 2),
             text,
-            font=self.badge_font,
-            fill=self.badge_text_colour,
+            font=self.skin.badge_font,
+            fill=self.skin.badge_text_colour,
             anchor='lm'
         )
 
@@ -572,22 +598,22 @@ class GoalPage:
             # Draw task first to check if it fits on the page
             task_image = self._draw_text(
                 task,
-                image.width - xpos - self.task_done_number_bg.width - self.task_num_sep,
+                image.width - xpos - self.skin.task_done_number_bg.width - self.skin.task_num_sep,
                 done
             )
             if task_image.height + ypos > image.height:
                 break
 
             # Draw number background
-            bg = self.task_done_number_bg if done else self.task_undone_number_bg
+            bg = self.skin.task_done_number_bg if done else self.skin.task_undone_number_bg
             image.alpha_composite(
                 bg,
                 (xpos, ypos)
             )
 
             # Draw number
-            font = self.task_done_number_font if done else self.task_undone_number_font
-            colour = self.task_done_number_colour if done else self.task_undone_number_colour
+            font = self.skin.task_done_number_font if done else self.skin.task_undone_number_font
+            colour = self.skin.task_done_number_colour if done else self.skin.task_undone_number_colour
             draw.text(
                 (xpos + bg.width // 2, ypos + bg.height // 2),
                 str(n),
@@ -599,10 +625,10 @@ class GoalPage:
             # Draw text
             image.alpha_composite(
                 task_image,
-                (xpos + bg.width + self.task_num_sep, ypos - (bg.height - self.task_text_height) // 2)
+                (xpos + bg.width + self.skin.task_num_sep, ypos - (bg.height - self.skin.task_text_height) // 2)
             )
 
-            ypos += task_image.height + self.task_inter_gap
+            ypos += task_image.height + self.skin.task_inter_gap
 
         return image
 
@@ -610,8 +636,8 @@ class GoalPage:
         """
         Draw the text of a given task.
         """
-        font = self.task_done_text_font if done else self.task_undone_text_font
-        colour = self.task_done_text_colour if done else self.task_undone_text_colour
+        font = self.skin.task_done_text_font if done else self.skin.task_undone_text_font
+        colour = self.skin.task_done_text_colour if done else self.skin.task_undone_text_colour
 
         size = font.getsize(task)
         image = Image.new('RGBA', (min(size[0], maxwidth), size[1]))
@@ -625,8 +651,8 @@ class GoalPage:
             x1, y1, x2, y2 = font.getbbox(task)
             draw.line(
                 (x1, y + y1 + (y2 - y1) // 2, x2, y + y1 + (y2 - y1) // 2),
-                fill=self.task_done_text_colour,
-                width=self.task_done_line_width
+                fill=self.skin.task_done_text_colour,
+                width=self.skin.task_done_line_width
             )
 
         return image
@@ -634,9 +660,9 @@ class GoalPage:
     def _draw_progress_bar(self, amount):
         amount = min(amount, 1)
         amount = max(amount, 0)
-        bg = self.progress_bg
-        end = self.progress_end
-        mask = self.progress_mask
+        bg = self.skin.progress_bg
+        end = self.skin.progress_end
+        mask = self.skin.progress_mask
 
         center = (
             bg.width // 2 + 1,

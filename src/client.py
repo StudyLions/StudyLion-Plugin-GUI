@@ -25,15 +25,18 @@ async def request(route, args=(), kwargs={}):
 
     writer.write(encoded)
     writer.write_eof()
-    await writer.drain()
 
-    data = await reader.read()
-    writer.close()
+    data = await reader.read(-1)
+
     end = time.time()
     logging.debug(
         f"Round-trip rendering took {end-now} seconds"
     )
-    if data == "".encode():
+
+    await asyncio.sleep(0)
+    writer.close()
+
+    if data == b'':
         raise EmptyResponse
 
     return data

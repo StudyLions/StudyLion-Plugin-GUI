@@ -5,12 +5,12 @@ from data.conditions import GEQ
 
 from modules.stats import goals
 
-from ..module import module, ratelimit, executor
+from ..module import module, ratelimit
 
-from ..drawing.goals import GoalPage
-from ..drawing.weekly import WeeklyStatsPage
-from ..drawing.monthly import MonthlyStatsPage
-from ..utils import get_avatar, image_as_file
+from ...cards import GoalPage, MonthlyStatsPage
+# from ..drawing.weekly import WeeklyStatsPage
+# from ..drawing.monthly import MonthlyStatsPage
+from ...utils import get_avatar_key, image_as_file
 
 
 async def _get_weekly_goals(ctx):
@@ -177,10 +177,10 @@ async def _get_monthly_goals(ctx):
     else:
         acc_rate = None
 
-    goalpage = GoalPage(
+    goalpage = await GoalPage.request(
         name=ctx.author.name,
         discrim=f"#{ctx.author.discriminator}",
-        avatar=await get_avatar(ctx.client, ctx.author.id, size=256),
+        avatar=get_avatar_key(ctx.client, ctx.author.id),
         badges=ctx.alion.profile_tags,
         tasks_done=tasks_done,
         studied_hours=study_hours,
@@ -191,8 +191,7 @@ async def _get_monthly_goals(ctx):
         date=ctx.alion.day_start,
         month=True
     )
-
-    return await asyncio.get_event_loop().run_in_executor(executor, goalpage.draw)
+    return goalpage
 
 
 @ratelimit.ward()
@@ -216,8 +215,6 @@ async def cmd_monthly(ctx):
         View your monthly study profile.
         See `{prefix}monthlygoals` to edit your goals!
     """
-    page_1 = await _get_monthly_goals(ctx)
-
     day_start = ctx.alion.day_start
     period_start = day_start - timedelta(days=31*4)
 
@@ -298,7 +295,8 @@ async def cmd_monthly(ctx):
 
     first_session_start = sessions[-1][0]
     sessions = [session for session in sessions if session[1] > period_start]
-    card = MonthlyStatsPage(
+    # page_1_task = asyncio.create_task(_get_monthly_goals(ctx))
+    page_2_task = asyncio.create_task(MonthlyStatsPage.request(
         ctx.author.name,
         f"#{ctx.author.discriminator}",
         sessions,
@@ -306,8 +304,11 @@ async def cmd_monthly(ctx):
         current_streak or 0,
         max_streak or 0,
         first_session_start
-    )
-    page_2 = await asyncio.get_event_loop().run_in_executor(executor, card.draw)
+    ))
+    # await asyncio.gather(page_1_task, page_2_task)
+    await page_2_task
+    page_1 = page_2_task.result()
+    page_2 = page_2_task.result()
     await ctx.reply(
         files=[
             image_as_file(page_1, "monthly_stats_1.png"),

@@ -194,6 +194,9 @@ class Skin:
         Should only be run during rendering process.
         """
         start = time.time()
+        last = start
+
+        time.sleep(10)
         self._preload()
         self.fields = {}
         for name, field_desc in self._fields.items():
@@ -203,7 +206,10 @@ class Skin:
                 **self._env
             ).load()
             self.fields[name] = field
-            # logging.debug(f"{name}: {field.value}")
+
+            now = time.time()
+            logging.debug(f"{now - last:.6f} -- {name}: {field.value}")
+            last = now
         self._setup()
         end = time.time()
         logging.debug(f"Skin loading took {end-start} seconds")
