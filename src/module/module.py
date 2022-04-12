@@ -77,11 +77,10 @@ async def ping_server(client):
     start = time.time()
     try:
         await request('ping')
-    except (ConnectionError, EmptyResponse):
-        client.log(
+    except Exception:
+        logging.error(
             "Failed to ping the rendering server!",
-            context="GUI INIT",
-            level=logging.ERROR,
+            exc_info=True
         )
     else:
         end = time.time()

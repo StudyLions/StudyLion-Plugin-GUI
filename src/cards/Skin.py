@@ -49,7 +49,7 @@ class AssetField(Field):
     def load(self):
         image = Image.open(asset_path(self.data))
         if self.convert:
-            image.convert(self.convert)
+            image = image.convert(self.convert)
         self.value = image
         return self
 
