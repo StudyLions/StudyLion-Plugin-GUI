@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from .Card import Card
 from .Skin import fielded, Skin
-from .Skin import AssetField, NumberField, FontField, ColourField, ComputedField, RawField, StringField
+from .Skin import AssetField, RGBAAssetField, NumberField, FontField, ColourField, ComputedField, RawField, StringField
 
 from ..utils import asset_path
 
@@ -48,13 +48,13 @@ class WeeklyStatsSkin(Skin):
     top_date_colour: ColourField = '#808080'
     top_date_height: ComputedField = lambda skin: skin.top_date_font.getsize('8/8')[1]
 
-    top_this_top: AssetField = 'weekly/top/this_top.png'
+    top_this_top: RGBAAssetField = 'weekly/top/this_top.png'
     top_this_colour: ColourField = '#DDB21D'
-    top_this_btm: AssetField = 'weekly/top/this_bottom.png'
+    top_this_btm: RGBAAssetField = 'weekly/top/this_bottom.png'
 
-    top_last_top: AssetField = 'weekly/top/last_top.png'
+    top_last_top: RGBAAssetField = 'weekly/top/last_top.png'
     top_last_colour: ColourField = '#377689CC'
-    top_last_btm: AssetField = 'weekly/top/last_bottom.png'
+    top_last_btm: RGBAAssetField = 'weekly/top/last_bottom.png'
 
     top_gap: NumberField = 80
 

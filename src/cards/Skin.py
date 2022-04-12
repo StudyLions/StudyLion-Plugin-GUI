@@ -47,8 +47,10 @@ class AssetField(Field):
     """
     __slots__ = ('convert',)
 
-    def __init__(self, convert='RGBA', **kwargs):
-        self.convert = convert
+    _default_convert = None
+
+    def __init__(self, convert=None, **kwargs):
+        self.convert = convert or self._default_convert
 
         super().__init__(**kwargs)
 
@@ -62,6 +64,11 @@ class AssetField(Field):
     def close(self):
         if self.value is not None:
             self.value.close()
+
+
+class RGBAAssetField(AssetField):
+    __slots__ = ()
+    _default_convert = 'RGBA'
 
 
 class AssetPathField(Field):
