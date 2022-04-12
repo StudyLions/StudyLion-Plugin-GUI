@@ -12,6 +12,8 @@ socket_path = os.path.join(__socket_location__, "gui.sock")
 class EmptyResponse(ValueError):
     ...
 
+# TODO: Request retry to handle restarting or temporary errors
+
 
 async def request(route, args=(), kwargs={}):
     logging.debug(

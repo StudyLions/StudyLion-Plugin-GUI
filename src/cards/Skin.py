@@ -237,15 +237,15 @@ def fielded(cls):
     _fields = {}
 
     for attr, annotation in cls.__annotations__.items():
-        if issubclass(annotation, Field):
+        if issubclass(annotation, Field) and hasattr(cls, attr):
             value = getattr(cls, attr)
             if isinstance(value, FieldDesc):
                 _fields[attr] = value
             else:
                 _fields[attr] = FieldDesc(annotation, value)
             delattr(cls, attr)
-    cls._fields = _fields
+    cls._fields = {**cls._fields, **_fields}
 
-    for field_name in cls._fields:
+    for field_name in _fields:
         setattr(cls, field_name, property(_field_property_wrapper(field_name)))
     return cls

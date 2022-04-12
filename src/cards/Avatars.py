@@ -77,6 +77,12 @@ class Avatars:
             diff = time.time() - now
             logging.debug(f"Avatar {key!r} fetched from Discord CDN in {diff} seconds")
 
+        if result is None:
+            result = await self.get_avatar(None, None, size)
+            if result is None:
+                # Issue obtaining default avatar
+                logging.critical("Cannot retrieve default avatar from Discord CDN!")
+
         return result
 
     async def get_avatars(self, *keys):

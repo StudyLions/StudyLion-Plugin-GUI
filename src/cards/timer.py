@@ -1,65 +1,124 @@
 import math
+from io import BytesIO
 from PIL import Image, ImageDraw, ImageOps
 
-from ..utils import asset_path, inter_font
+from .Card import Card
+from .Avatars import avatar_manager
+from .Skin import fielded, Skin
+from .Skin import AssetField, NumberField, FontField, ColourField, PointField, ComputedField, StringField
 
 
-class TimerCard:
-    scale = 2
+@fielded
+class TimerBaseSkin(Skin):
+    _env = {
+        'scale': 2  # General size scale to match background resolution
+    }
 
-    background = Image.open(asset_path("timer/background.png")).convert('RGBA')
-    main_colour: str
+    background: AssetField = "timer/background.png"
+    main_colour: ColourField
 
-    header_field_height = 343
-    header_font = inter_font('ExtraBold', size=int(scale*76))
+    header_field_height: NumberField = 171.5
+    header_font: FontField = ('ExtraBold', 76)
 
-    inner_margin = 80
-    inner_sep = 15
+    inner_margin: NumberField = 40
+    inner_sep: NumberField = 7.5
 
     # Timer section
     # Outer progress bar
-    progress_end: Image
-    progress_start: Image
-    progress_bg = Image.open(asset_path("timer/break_timer.png")).convert('RGBA')
-    progress_mask = ImageOps.invert(progress_bg.split()[-1].convert('L'))
+    progress_end: AssetField
+    progress_start: AssetField
+    progress_bg: AssetField = "timer/break_timer.png"
+    progress_mask: ComputedField = lambda skin: ImageOps.invert(skin.progress_bg.split()[-1].convert('L'))
 
-    timer_bg = Image.open(asset_path("timer/timer_bg.png")).convert('RGBA')
+    timer_bg: AssetField = "timer/timer_bg.png"
 
     # Inner timer text
-    countdown_font = inter_font('Light', size=int(scale*112))
-    countdown_gap = int(scale * 10)
-    stage_font = inter_font('Light', size=int(scale*43.65))
-    stage_colour = '#FFFFFF'
+    countdown_font: FontField = ('Light', 112)
+    countdown_gap: NumberField = 10
+    stage_font: FontField = ('Light', 43.65)
+    stage_colour: ColourField = '#FFFFFF'
 
-    mic_icon: Image
-    stage_text: str
+    mic_icon: AssetField
+    stage_text: StringField
 
     # Members
-    user_bg = Image.open(asset_path("timer/break_user.png")).convert('RGBA')
-    user_mask = Image.open(asset_path("timer/avatar_mask.png")).convert('RGBA')
+    user_bg: AssetField = "timer/break_user.png"
+    user_mask: AssetField = "timer/avatar_mask.png"
 
-    time_font = inter_font('Black', size=int(scale*26))
-    time_colour = '#FFFFFF'
+    time_font: FontField = ('Black', 26)
+    time_colour: ColourField = '#FFFFFF'
 
-    tag_gap = 11
-    tag: Image
-    tag_font = inter_font('SemiBold', size=int(scale*25))
+    tag_gap: NumberField = 5.5
+    tag: AssetField
+    tag_font: FontField = ('SemiBold', 25)
 
     # grid_x = (background.width - progress_mask.width - 2 * progress_end.width - grid_start[0] - user_bg.width) // 4
-    grid_x = 344
-    grid_y = 246
+    grid: PointField = (344, 246)
 
     # Date text
-    date_font = inter_font('Bold', size=int(scale * 28))
-    date_colour = '#6f6e6f'
-    date_gap = int(scale * 50)
+    date_font: FontField = ('Bold', 28)
+    date_colour: ColourField = '#6f6e6f'
+    date_gap: NumberField = 50
 
-    def __init__(self, name, remaining, duration, users):
+
+@fielded
+class TimerFocusSkin(TimerBaseSkin):
+    main_colour: ColourField = '#DDB21D'
+    user_bg: AssetField = "timer/focus_user.png"
+    mic_icon: AssetField = "timer/mute.png"
+    progress_end: AssetField = "timer/progress_end_focus.png"
+    progress_start: AssetField = "timer/progress_start_focus.png"
+    stage_text: StringField = "FOCUS"
+    tag: AssetField = "timer/focus_tag.png"
+
+
+@fielded
+class TimerBreakSkin(TimerBaseSkin):
+    main_colour: ColourField = '#78B7EF'
+    user_bg: AssetField = "timer/break_user.png"
+    mic_icon: AssetField = "timer/unmute.png"
+    progress_end: AssetField = "timer/progress_end_break.png"
+    progress_start: AssetField = "timer/progress_start_break.png"
+    stage_text: StringField = "BREAK"
+    tag: AssetField = "timer/break_tag.png"
+
+
+class TimerCard(Card):
+    server_route = 'timer_card'
+
+    def __init__(self, name, remaining, duration, users, focus=True):
+        if focus:
+            self.skin = TimerFocusSkin().load()
+        else:
+            self.skin = TimerBreakSkin().load()
+
         self.data_name = name
         self.data_remaining = 5 * math.ceil(remaining / 5)
         self.data_duration = duration
         self.data_amount = 1 - remaining / duration
         self.data_users = sorted(users, key=lambda user: user[1], reverse=True)  # (avatar, time)
+
+    @classmethod
+    async def card_route(cls, executor, requestid, args, kwargs):
+        if kwargs['users']:
+            avatar_keys, times, tags = zip(*kwargs['users'])
+            avatars = await avatar_manager().get_avatars(*((*key, 512) for key in avatar_keys))
+            kwargs['users'] = tuple(zip(avatars, times, tags))
+
+        return await super().card_route(executor, requestid, args, kwargs)
+
+    @classmethod
+    def _execute(cls, *args, **kwargs):
+        if kwargs['users']:
+            avatar_data, times, tags = zip(*kwargs['users'])
+            avatars = []
+            for datum in avatar_data:
+                with BytesIO(datum) as buffer:
+                    buffer.seek(0)
+                    avatars.append(Image.open(buffer).convert('RGBA'))
+            kwargs['users'] = tuple(zip(avatars, times, tags))
+
+        return super()._execute(*args, **kwargs)
 
     @staticmethod
     def format_time(time, hours=True):
@@ -69,28 +128,28 @@ class TimerCard:
             return "{:02}:{:02}".format(int(time // 60), int(time % 60))
 
     def draw(self):
-        image = self.background.copy()
+        image = self.skin.background
         draw = ImageDraw.Draw(image)
 
         # Draw header
         text = self.data_name
-        length = self.header_font.getlength(text)
+        length = self.skin.header_font.getlength(text)
         draw.text(
-            (image.width // 2, self.header_field_height // 2),
+            (image.width // 2, self.skin.header_field_height // 2),
             text,
-            fill=self.main_colour,
-            font=self.header_font,
+            fill=self.skin.main_colour,
+            font=self.skin.header_font,
             anchor='mm'
         )
 
         # Draw timer
         timer_image = self._draw_progress_bar(self.data_amount)
         ypos = timer_y = (
-            self.header_field_height
-            + (image.height - self.header_field_height - timer_image.height) // 2
-            - self.progress_end.height // 2
+            self.skin.header_field_height
+            + (image.height - self.skin.header_field_height - timer_image.height) // 2
+            - self.skin.progress_end.height // 2
         )
-        xpos = timer_x = image.width - self.inner_margin - timer_image.width
+        xpos = timer_x = image.width - self.skin.inner_margin - timer_image.width
 
         image.alpha_composite(
             timer_image,
@@ -98,34 +157,34 @@ class TimerCard:
         )
 
         # Draw timer text
-        stage_size = self.stage_font.getsize(' ' + self.stage_text)
+        stage_size = self.skin.stage_font.getsize(' ' + self.skin.stage_text)
 
         ypos += timer_image.height // 2 - stage_size[1] // 2
         xpos += timer_image.width // 2
         draw.text(
             (xpos, ypos),
             (text := self.format_time(self.data_remaining)),
-            fill=self.main_colour,
-            font=self.countdown_font,
+            fill=self.skin.main_colour,
+            font=self.skin.countdown_font,
             anchor='mm'
         )
 
-        size = int(self.countdown_font.getsize(text)[1])
+        size = int(self.skin.countdown_font.getsize(text)[1])
         ypos += size
 
-        self.mic_icon.thumbnail((stage_size[1], stage_size[1]))
-        length = int(self.mic_icon.width + self.stage_font.getlength(' ' + self.stage_text))
+        self.skin.mic_icon.thumbnail((stage_size[1], stage_size[1]))
+        length = int(self.skin.mic_icon.width + self.skin.stage_font.getlength(' ' + self.skin.stage_text))
         xpos -= length // 2
 
         image.alpha_composite(
-            self.mic_icon,
-            (xpos, ypos - self.mic_icon.height)
+            self.skin.mic_icon,
+            (xpos, ypos - self.skin.mic_icon.height)
         )
         draw.text(
-            (xpos + self.mic_icon.width, ypos),
-            ' ' + self.stage_text,
-            fill=self.stage_colour,
-            font=self.stage_font,
+            (xpos + self.skin.mic_icon.width, ypos),
+            ' ' + self.skin.stage_text,
+            fill=self.skin.stage_colour,
+            font=self.skin.stage_font,
             anchor='ls'
         )
 
@@ -133,11 +192,11 @@ class TimerCard:
         if self.data_users:
             grid_image = self.draw_user_grid()
 
-            # ypos = self.header_field_height + (image.height - self.header_field_height - grid_image.height) // 2
+            # ypos = self.skin.header_field_height + (image.height - self.skin.header_field_height - grid_image.height) // 2
             ypos = timer_y + (timer_image.height - grid_image.height) // 2 - stage_size[1] // 2
             xpos = (
-                self.inner_margin
-                + (timer_x - self.inner_sep - self.inner_margin) // 2
+                self.skin.inner_margin
+                + (timer_x - self.skin.inner_sep - self.skin.inner_margin) // 2
                 - grid_image.width // 2
             )
 
@@ -148,15 +207,15 @@ class TimerCard:
 
         # Draw the footer
         ypos = image.height
-        ypos -= self.date_gap
+        ypos -= self.skin.date_gap
         date_text = "Use !now [text] to show what you are working on!"
-        size = self.date_font.getsize(date_text)
+        size = self.skin.date_font.getsize(date_text)
         ypos -= size[1]
         draw.text(
             ((image.width - size[0]) // 2, ypos),
             date_text,
-            font=self.date_font,
-            fill=self.date_colour
+            font=self.skin.date_font,
+            fill=self.skin.date_colour
         )
         return image
 
@@ -169,8 +228,8 @@ class TimerCard:
         # columns = min(len(users), 5)
 
         size = (
-            (columns - 1) * self.grid_x + self.user_bg.width,
-            (rows - 1) * self.grid_y + self.user_bg.height + self.tag_gap + self.tag.height
+            (columns - 1) * self.skin.grid[0] + self.skin.user_bg.width,
+            (rows - 1) * self.skin.grid[1] + self.skin.user_bg.height + self.skin.tag_gap + self.skin.tag.height
         )
 
         image = Image.new(
@@ -178,8 +237,8 @@ class TimerCard:
             size
         )
         for i, user in enumerate(users):
-            x = (i % 5) * self.grid_x
-            y = (i // 5) * self.grid_y
+            x = (i % 5) * self.skin.grid[0]
+            y = (i // 5) * self.skin.grid[1]
 
             user_image = self.draw_user(user)
             image.alpha_composite(
@@ -189,45 +248,45 @@ class TimerCard:
         return image
 
     def draw_user(self, user):
-        width = self.user_bg.width
-        height = self.user_bg.height + self.tag_gap + self.tag.height
+        width = self.skin.user_bg.width
+        height = self.skin.user_bg.height + self.skin.tag_gap + self.skin.tag.height
         image = Image.new('RGBA', (width, height))
         draw = ImageDraw.Draw(image)
 
-        image.alpha_composite(self.user_bg)
+        image.alpha_composite(self.skin.user_bg)
 
         avatar, time, tag = user
-        avatar = avatar.copy()
+        avatar = avatar
         timestr = self.format_time(time, hours=True)
 
         # Mask avatar
-        avatar.paste((0, 0, 0, 0), mask=self.user_mask)
+        avatar.paste((0, 0, 0, 0), mask=self.skin.user_mask.convert('RGBA'))
 
         # Resize avatar
-        avatar.thumbnail((self.user_bg.height - 10, self.user_bg.height - 10))
+        avatar.thumbnail((self.skin.user_bg.height - 10, self.skin.user_bg.height - 10))
 
         image.alpha_composite(
             avatar,
             (5, 5)
         )
         draw.text(
-            (120, self.user_bg.height // 2),
+            (120, self.skin.user_bg.height // 2),
             timestr,
             anchor='lm',
-            font=self.time_font,
-            fill=self.time_colour
+            font=self.skin.time_font,
+            fill=self.skin.time_colour
         )
 
         if tag:
-            ypos = self.user_bg.height + self.tag_gap
+            ypos = self.skin.user_bg.height + self.skin.tag_gap
             image.alpha_composite(
-                self.tag,
-                ((image.width - self.tag.width) // 2, ypos)
+                self.skin.tag,
+                ((image.width - self.skin.tag.width) // 2, ypos)
             )
             draw.text(
-                (image.width // 2, ypos + self.tag.height // 2),
+                (image.width // 2, ypos + self.skin.tag.height // 2),
                 tag,
-                font=self.tag_font,
+                font=self.skin.tag_font,
                 fill='#FFFFFF',
                 anchor='mm'
             )
@@ -236,9 +295,9 @@ class TimerCard:
     def _draw_progress_bar(self, amount):
         amount = min(amount, 1)
         amount = max(amount, 0)
-        bg = self.timer_bg
-        end = self.progress_start
-        mask = self.progress_mask
+        bg = self.skin.timer_bg
+        end = self.skin.progress_start
+        mask = self.skin.progress_mask
 
         center = (
             bg.width // 2 + 1,
@@ -303,29 +362,29 @@ class TimerCard:
 
             draw.polygon(
                 path,
-                fill=self.main_colour
+                fill=self.skin.main_colour
             )
 
             canvas.paste((0, 0, 0, 0), mask=mask)
 
         image = Image.new(
             'RGBA',
-            size=(bg.width + self.progress_end.width,
-                  bg.height + self.progress_end.height)
+            size=(bg.width + self.skin.progress_end.width,
+                  bg.height + self.skin.progress_end.height)
         )
         image.alpha_composite(
             bg,
-            (self.progress_end.width // 2,
-             self.progress_end.height // 2)
+            (self.skin.progress_end.width // 2,
+             self.skin.progress_end.height // 2)
         )
         image.alpha_composite(
             canvas,
-            (self.progress_end.width // 2,
-             self.progress_end.height // 2)
+            (self.skin.progress_end.width // 2,
+             self.skin.progress_end.height // 2)
         )
 
         image.alpha_composite(
-            self.progress_end,
+            self.skin.progress_end,
             (
                 x,
                 y
@@ -333,23 +392,3 @@ class TimerCard:
         )
 
         return image
-
-
-class FocusTimerCard(TimerCard):
-    main_colour = '#DDB21D'
-    user_bg = Image.open(asset_path("timer/focus_user.png")).convert('RGBA')
-    mic_icon = Image.open(asset_path("timer/mute.png")).convert('RGBA')
-    progress_end = Image.open(asset_path("timer/progress_end_focus.png")).convert('RGBA')
-    progress_start = Image.open(asset_path("timer/progress_start_focus.png")).convert('RGBA')
-    stage_text = "FOCUS"
-    tag = Image.open(asset_path("timer/focus_tag.png")).convert("RGBA")
-
-
-class BreakTimerCard(TimerCard):
-    main_colour = '#78B7EF'
-    user_bg = Image.open(asset_path("timer/break_user.png")).convert('RGBA')
-    mic_icon = Image.open(asset_path("timer/unmute.png")).convert('RGBA')
-    progress_end = Image.open(asset_path("timer/progress_end_break.png")).convert('RGBA')
-    progress_start = Image.open(asset_path("timer/progress_start_break.png")).convert('RGBA')
-    stage_text = "BREAK"
-    tag = Image.open(asset_path("timer/break_tag.png")).convert("RGBA")

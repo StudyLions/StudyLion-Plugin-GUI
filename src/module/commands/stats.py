@@ -237,7 +237,6 @@ async def cmd_stats(ctx):
     else:
         target = ctx.author
 
-    start = time.time()
     # System sync
     Lion.sync()
 
@@ -254,10 +253,8 @@ async def cmd_stats(ctx):
 
     profile_file = image_as_file(profile_image, f"profile_{target.id}.png")
     stats_file = image_as_file(stats_image, f"stats_{target.id}.png")
-    end = time.time()
 
     await ctx.reply(files=[profile_file, stats_file])
-    await ctx.reply(f"Rendering complete, round trip: `{end-start}` seconds")
 
 
 @module.cmd(

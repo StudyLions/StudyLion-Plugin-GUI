@@ -11,10 +11,9 @@ from meta import client
 
 from modules.study.timers.Timer import Timer
 
-from ..drawing import BreakTimerCard, FocusTimerCard
-from ..module import executor
+from ...cards import TimerCard
 
-from ..utils import get_avatar, image_as_file, edit_files, asset_path
+from ...utils import get_avatar_key, image_as_file, edit_files, asset_path
 
 
 async def status(self):
@@ -24,19 +23,18 @@ async def status(self):
     remaining = int((stage.end - utc_now()).total_seconds())
     duration = int(stage.duration)
     users = [
-        (await get_avatar(client, member.id, size=512),
+        (get_avatar_key(client, member.id),
          session.duration if (session := Lion.fetch(member.guild.id, member.id).session) else 0,
          session.data.tag if session else None)
         for member in self.members
     ]
-    if stage.name == 'BREAK':
-        card = BreakTimerCard(name, remaining, duration, users)
-        page = await asyncio.get_event_loop().run_in_executor(executor, card.draw)
-    elif stage.name == 'FOCUS':
-        card = FocusTimerCard(name, remaining, duration, users)
-        page = await asyncio.get_event_loop().run_in_executor(executor, card.draw)
-    else:
-        page = None
+    page = await TimerCard.request(
+        name,
+        remaining,
+        duration,
+        users=users,
+        focus=(stage.name == 'FOCUS')
+    )
 
     return {'files': [image_as_file(page, name="timer.png")]}
 

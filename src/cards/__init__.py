@@ -8,6 +8,7 @@ from .monthly import MonthlyStatsPage, MonthlyStatsSkin
 from .weekly import WeeklyStatsPage, WeeklyStatsSkin
 from .tasklist import Tasklist, TasklistSkin
 from .leaderboard import LeaderboardPage, LeaderboardSkin, LeaderboardEntry
+from .timer import TimerCard, TimerBreakSkin, TimerFocusSkin
 
 registered = (
     TestCard,
@@ -17,5 +18,6 @@ registered = (
     MonthlyStatsPage,
     WeeklyStatsPage,
     Tasklist,
-    LeaderboardPage
+    LeaderboardPage,
+    TimerCard
 )
