@@ -1,4 +1,3 @@
-import io
 import gc
 import asyncio
 import discord
@@ -8,10 +7,10 @@ import data
 from data import tables
 from utils.interactive import discord_shield
 
-from ..drawing import LeaderboardEntry, LeaderboardPage
-from ..utils import image_as_file, edit_files
+from ...cards import LeaderboardPage
+from ...utils import image_as_file, edit_files, get_avatar_key
 
-from ..module import module, ratelimit, executor
+from ..module import module, ratelimit
 
 
 next_emoji = "▶"
@@ -73,7 +72,7 @@ async def cmd_top(ctx):
             name = str(userid)
 
         entries.append(
-            LeaderboardEntry(userid, i + 1, time, name)
+            (userid, i + 1, time, name, get_avatar_key(ctx.client, userid))
         )
 
         if ctx.author.id == userid:
@@ -81,44 +80,39 @@ async def cmd_top(ctx):
 
     # Break into pages
     entry_pages = [entries[i:i+10] for i in range(0, len(entries), 10)]
-    pages = [
-        LeaderboardPage(ctx.guild.name, page, highlight=author_rank)
-        for page in entry_pages
-    ]
-    page_count = len(pages)
+    page_count = len(entry_pages)
     author_page = (author_rank - 1) // 10 if author_rank is not None else None
 
     if page_count == 1:
-        await asyncio.gather(*(entry.save_avatar_from(ctx.client) for entry in entries))
-        page = pages[0]
-        image = await asyncio.get_event_loop().run_in_executor(executor, page.draw)
+        image = await LeaderboardPage.request(ctx.guild.name, entries=entry_pages[0], highlight=author_rank)
         _file = image_as_file(image, "leaderboard.png")
         await ctx.reply(file=_file)
         del image
     else:
         page_i = 0
 
-        page_cache = {}
+        page_futures = {}
 
-        async def get_page(i, prepare=False):
-            if not (_image := page_cache.get(i, None)):
-                page = pages[i % page_count]
-                await asyncio.gather(*(entry.save_avatar_from(ctx.client) for entry in page.entries))
-                page_cache[i] = _image = await asyncio.get_event_loop().run_in_executor(
-                    executor,
-                    page.draw
+        def submit_page_request(i):
+            if (_existing := page_futures.get(i, None)) is not None:
+                # A future was already submitted
+                _future = _existing
+            else:
+                _future = asyncio.create_task(
+                    LeaderboardPage.request(
+                        ctx.guild.name,
+                        entries=entry_pages[i % page_count],
+                        highlight=author_rank
+                    )
                 )
-
-            return None if prepare else image_as_file(_image, f"leaderboard_{i}.png")
+                page_futures[i] = _future
+            return _future
 
         # Draw first page
-        out_msg = await ctx.reply(file=await get_page(0))
+        out_msg = await ctx.reply(file=image_as_file(await submit_page_request(0), "leaderboard.png"))
 
         # Prefetch likely next page
-        if author_page:
-            asyncio.create_task(get_page(author_page, True))
-        else:
-            asyncio.create_task(get_page(1, True))
+        submit_page_request(author_page or 1)
 
         # Add reactions
         try:
@@ -167,17 +161,18 @@ async def cmd_top(ctx):
                 page_i = author_page
 
             # Edit the message
+            image = await submit_page_request(page_i)
+            image_file = image_as_file(image, f"leaderboard_{page_i}.png")
+
             await edit_files(
                 ctx.client._connection.http,
                 ctx.ch.id,
                 out_msg.id,
-                files=[await get_page(page_i)]
+                files=[image_file]
             )
-            # await out_msg.edit(file=await get_page(page_i))
-
             # Prefetch surrounding pages
-            asyncio.create_task(get_page((page_i + 1) % page_count, True))
-            asyncio.create_task(get_page((page_i - 1) % page_count, True))
+            submit_page_request((page_i + 1) % page_count)
+            submit_page_request((page_i - 1) % page_count)
 
         # Clean up reactions
         try:
@@ -192,5 +187,5 @@ async def cmd_top(ctx):
             pass
 
         # Delete the image cache and explicit garbage collect
-        del page_cache
+        del page_futures
         gc.collect()

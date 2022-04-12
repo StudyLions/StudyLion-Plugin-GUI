@@ -86,6 +86,6 @@ async def ping_server(client):
     else:
         end = time.time()
         client.log(
-            f"Rendering server responded in {end-start} seconds!",
+            f"Rendering server responded in {end-start:.6f} seconds!",
             context="GUI INIT",
         )

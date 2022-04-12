@@ -35,11 +35,14 @@ async def handle_request(reader, writer):
             response = await routes[route](executor, rqid, args, kwargs)
         except Exception:
             end = time.time()
-            logging.info(f"Rendering request completed with an exception in {end-start} seconds.")
+            logging.error(
+                f"Rendering request completed with an exception in {end-start:.6f} seconds.",
+                exc_info=True
+            )
             response = b''
         else:
             end = time.time()
-            logging.info(f"Rendering request complete in {end-start} seconds.")
+            logging.info(f"Rendering request complete in {end-start:.6f} seconds.")
     else:
         logging.warning(f"Unhandled route requested {route!r}")
         response = b''

@@ -17,7 +17,7 @@ DEFAULT_AVATAR_PATH = '/embed/avatars/{id}.png'
 
 async def avatar_from_cdn(userid, avatar_hash, ext, size):
     if avatar_hash is None:
-        url = DISCORD_BASE + DEFAULT_AVATAR_PATH(id=0)
+        url = DISCORD_BASE + DEFAULT_AVATAR_PATH.format(id=0)
     else:
         url = DISCORD_BASE + AVATAR_PATH.format(uid=userid, avatar_hash=avatar_hash, ext=ext, size=size)
 

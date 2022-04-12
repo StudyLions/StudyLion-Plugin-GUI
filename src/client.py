@@ -30,7 +30,7 @@ async def request(route, args=(), kwargs={}):
 
     end = time.time()
     logging.debug(
-        f"Round-trip rendering took {end-now} seconds"
+        f"Round-trip rendering took {end-now:.6f} seconds"
     )
 
     await asyncio.sleep(0)

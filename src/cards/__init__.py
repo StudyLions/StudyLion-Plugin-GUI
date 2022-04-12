@@ -7,5 +7,15 @@ from .goals import GoalPage, GoalSkin
 from .monthly import MonthlyStatsPage, MonthlyStatsSkin
 from .weekly import WeeklyStatsPage, WeeklyStatsSkin
 from .tasklist import Tasklist, TasklistSkin
+from .leaderboard import LeaderboardPage, LeaderboardSkin, LeaderboardEntry
 
-registered = (TestCard, StatsCard, ProfileCard, GoalPage, MonthlyStatsPage, WeeklyStatsPage, Tasklist)
+registered = (
+    TestCard,
+    StatsCard,
+    ProfileCard,
+    GoalPage,
+    MonthlyStatsPage,
+    WeeklyStatsPage,
+    Tasklist,
+    LeaderboardPage
+)
