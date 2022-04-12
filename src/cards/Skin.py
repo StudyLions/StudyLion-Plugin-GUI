@@ -89,6 +89,7 @@ class NumberField(Field):
     Expected data: Integer or Float
     """
     __slots__ = ('scaled', 'integer', 'scale')
+
     def __init__(self, scaled=True, integer=True, scale=1, **kwargs):
         self.scaled = scaled
         self.integer = integer
@@ -194,7 +195,7 @@ class Skin:
         Should only be run during rendering process.
         """
         start = time.time()
-        last = start
+        # last = start
 
         self._preload()
         self.fields = {}
@@ -206,9 +207,10 @@ class Skin:
             ).load()
             self.fields[name] = field
 
-            now = time.time()
-            logging.debug(f"{now - last:.6f} -- {name}: {field.value}")
-            last = now
+            # now = time.time()
+            # Instrumentation debug
+            # logging.debug(f"{now - last:.6f} -- {name}: {field.value}")
+            # last = now
         self._setup()
         end = time.time()
         logging.debug(f"Skin loading took {end-start} seconds")
