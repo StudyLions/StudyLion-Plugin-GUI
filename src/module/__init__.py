@@ -1,2 +1,2 @@
 from . import module
-from .commands import stats, goals
+from .commands import stats, goals, tasklist

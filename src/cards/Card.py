@@ -40,17 +40,18 @@ class Card:
         requestid.set(rqid)
 
         try:
-            card = cls(*args, **kwargs)
-            image = card.draw()
+            return cls(*args, **kwargs)._execute_draw()
         except Exception:
             logging.error(
                 f"Exception occurred rendering card {cls.__name__}:",
                 exc_info=True,
                 stack_info=True
             )
-            return "".encode()
+            return b''
 
-        data = BytesIO()
-        image.save(data, format='PNG')
-        data.seek(0)
-        return data.getvalue()
+    def _execute_draw(self):
+        with self.draw() as image:
+            with BytesIO() as data:
+                image.save(data, format='PNG')
+                data.seek(0)
+                return data.getvalue()

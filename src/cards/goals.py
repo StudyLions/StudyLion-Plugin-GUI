@@ -188,7 +188,6 @@ class GoalPage(Card):
                 kwargs['avatar'] = avatar_image
                 return super()._execute(*args, **kwargs)
 
-
     def draw(self) -> Image:
         image = self.skin.background
         draw = ImageDraw.Draw(image)
