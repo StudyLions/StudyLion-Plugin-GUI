@@ -34,6 +34,12 @@ class Field:
         """
         raise NotImplementedError
 
+    def close(self):
+        """
+        Clean up any opened resources.
+        """
+        pass
+
 
 class AssetField(Field):
     """
@@ -52,6 +58,10 @@ class AssetField(Field):
             image = image.convert(self.convert)
         self.value = image
         return self
+
+    def close(self):
+        if self.value is not None:
+            self.value.close()
 
 
 class AssetPathField(Field):
@@ -221,6 +231,10 @@ class Skin:
         Run after loading field values to, for example, compute dependent fields.
         """
         pass
+
+    def close(self):
+        for field in self.fields.values():
+            field.close()
 
 
 def _field_property_wrapper(field_name):

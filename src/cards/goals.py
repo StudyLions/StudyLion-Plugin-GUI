@@ -176,6 +176,8 @@ class GoalPage(Card):
             self.task_header = "GOALS OF THE WEEK"
         self.title_size = self.skin.title_font.getsize(self.title_text)
 
+        self.image = None
+
     @classmethod
     async def card_route(cls, executor, requestid, args, kwargs):
         kwargs['avatar'] = await avatar_manager().get_avatar(*kwargs['avatar'], 256)
@@ -266,6 +268,8 @@ class GoalPage(Card):
                 help_frame,
                 ((image.width - help_frame.width) // 2, ypos)
             )
+
+        self.image = image
 
         return image
 

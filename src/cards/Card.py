@@ -1,4 +1,6 @@
+import gc
 from io import BytesIO
+from contextlib import closing
 import asyncio
 import logging
 import functools
@@ -40,7 +42,14 @@ class Card:
         requestid.set(rqid)
 
         try:
-            return cls(*args, **kwargs)._execute_draw()
+            card = cls(*args, **kwargs)
+            with closing(cls(*args, **kwargs)) as card:
+                response = card._execute_draw()
+
+            del card
+            gc.collect()
+
+            return response
         except Exception:
             logging.error(
                 f"Exception occurred rendering card {cls.__name__}:",
@@ -55,3 +64,10 @@ class Card:
                 image.save(data, format='PNG')
                 data.seek(0)
                 return data.getvalue()
+
+    def close(self):
+        if hasattr(self, 'skin'):
+            self.skin.close()
+
+        if getattr(self, 'image', None):
+            self.image.close()
