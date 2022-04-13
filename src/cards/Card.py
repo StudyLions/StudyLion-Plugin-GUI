@@ -42,7 +42,6 @@ class Card:
         requestid.set(rqid)
 
         try:
-            card = cls(*args, **kwargs)
             with closing(cls(*args, **kwargs)) as card:
                 response = card._execute_draw()
 

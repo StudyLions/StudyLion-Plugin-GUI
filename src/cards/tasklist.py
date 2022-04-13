@@ -140,7 +140,7 @@ class Tasklist(Card):
         return self.images
 
     def _draw_first_page(self) -> Image:
-        image = self.skin.first_page_bg.copy()
+        image = self.skin.first_page_bg
         draw = ImageDraw.Draw(image)
         xpos, ypos = 0, 0
 
