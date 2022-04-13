@@ -39,7 +39,7 @@ async def status(self):
     return {'files': [image_as_file(page, name="timer.png")]}
 
 
-_guard_delay = 20
+_guard_delay = 60
 _guarded = {}  # timer channel id -> (last_executed_time, currently_waiting)
 
 
