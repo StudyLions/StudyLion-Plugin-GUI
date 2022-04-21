@@ -10,6 +10,8 @@ from .Avatars import avatar_manager
 
 @fielded
 class GoalSkin(Skin):
+    # TODO: Split into monthly/weekly
+    _card_id = 'goals'
     _env = {
         'scale': 2  # General size scale to match background resolution
     }

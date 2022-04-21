@@ -1,0 +1,13 @@
+{
+  "name": "Original",
+  "description": "The original base skin.",
+  "asset_root": "assets",
+  "properties": {
+    "stats": {
+      "header_colour": "#FF00FF"
+    },
+    "weekly_stats": {
+      "title_colour": "#0000FF"
+    }
+  }
+}

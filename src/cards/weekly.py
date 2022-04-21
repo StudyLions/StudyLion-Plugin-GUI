@@ -11,6 +11,8 @@ from ..utils import asset_path
 
 @fielded
 class WeeklyStatsSkin(Skin):
+    _card_id = "weekly_stats"
+
     _env = {
         'scale': 1  # General size scale to match background resolution
     }

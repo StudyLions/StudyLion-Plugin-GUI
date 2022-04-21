@@ -10,6 +10,7 @@ from .tasklist import Tasklist, TasklistSkin
 from .leaderboard import LeaderboardPage, LeaderboardSkin, LeaderboardEntry
 from .timer import TimerCard, TimerBreakSkin, TimerFocusSkin
 
+
 registered = (
     TestCard,
     StatsCard,

@@ -1,0 +1,38 @@
+{
+  "name": "Sample Skin",
+  "description": "A sample skin, for demonstration purposes only.",
+  "asset_root": "assets",
+  "properties": {
+    "stats": {
+      "bg_path": "stats/5_row_bg.png",
+      "alt_bg_path": "stats/6_row_bg.png",
+      "header_colour": "#DDB21D",
+      "stats_subheader_colour": "#FFFFFF",
+      "stats_text_colour": "#BABABA",
+      "col2_date_colour": "#FFFFFF",
+      "col2_hours_colour": "#1473A2"
+    },
+    "profile": {
+    },
+    "goals": {
+    },
+    "weekly_goals": {
+    },
+    "monthly_goals": {
+    },
+    "weekly_stats": {
+    },
+    "monthly_stats": {
+    },
+    "timer": {
+    },
+    "timer_focus": {
+    },
+    "timer_break": {
+    },
+    "leaderboard": {
+    },
+    "tasklist": {
+    }
+  }
+}

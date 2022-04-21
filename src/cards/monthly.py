@@ -13,6 +13,8 @@ from .Skin import AssetPathField
 
 @fielded
 class MonthlyStatsSkin(Skin):
+    _card_id = "monthly_stats"
+
     _env = {
         'scale': 2  # General size scale to match background resolution
     }

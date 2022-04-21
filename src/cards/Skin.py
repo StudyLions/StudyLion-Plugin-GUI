@@ -2,7 +2,7 @@ import time
 import logging
 
 from PIL import Image
-from ..utils import asset_path, inter_font
+from ..utils import asset_path, inter_font, GUISkin, resolve_asset_path
 
 
 class Field:
@@ -45,17 +45,18 @@ class AssetField(Field):
     """
     Expected data: Asset path string
     """
-    __slots__ = ('convert',)
+    __slots__ = ('convert', 'path')
 
     _default_convert = None
 
-    def __init__(self, convert=None, **kwargs):
-        self.convert = convert or self._default_convert
-
+    def __init__(self, convert=None, PATH=[], **kwargs):
         super().__init__(**kwargs)
 
+        self.convert = convert or self._default_convert
+        self.path = resolve_asset_path(PATH, self.data)
+
     def load(self):
-        image = Image.open(asset_path(self.data))
+        image = Image.open(self.path)
         if self.convert:
             image = image.convert(self.convert)
         self.value = image
@@ -77,8 +78,11 @@ class AssetPathField(Field):
     """
     __slots__ = ()
 
+    def __init__(self, convert=None, PATH=[], **kwargs):
+        super().__init__(**kwargs)
+        self.value = resolve_asset_path(PATH, self.data)
+
     def load(self):
-        self.value = asset_path(self.data)
         return self
 
 
@@ -130,6 +134,7 @@ class FontField(Field):
     TODO: Allow different font class?
     """
     __slots__ = ('scale',)
+
     def __init__(self, scale=1, **kwargs):
         self.scale = scale
         super().__init__(**kwargs)
@@ -176,6 +181,8 @@ class FieldDesc:
 
 
 class Skin:
+    _card_id = None
+
     # Field specifiers, describing the skin fields
     _fields = {
     }  # type: dict[str, FieldDesc]
@@ -185,24 +192,32 @@ class Skin:
     _env = {
     }
 
-    def __init__(self, **kwargs):
-        self.overwritten_data = kwargs
+    def __init__(self, base_skin_id=None, **kwargs):
+        self.base = GUISkin.get(base_skin_id).for_card(self._card_id)
+        self.overwrites = {**self.base, **kwargs}
         self.fields = None
 
     def serialise(self):
         """
         Serialise skin into a data dict loadable through init.
         """
-        return self.overwritten_data
+        return self.overwrites
 
-    def apply_overwrites(self, **kwargs):
-        self.overwritten_data.update(kwargs)
+    def apply_overwrites(self, base_skin_id=None, **kwargs):
+        self.overwrites.update(kwargs)
+
+    def _preload_paths(self):
+        if 'PATH' not in self._env:
+            self._env['PATH'] = []
+
+        self._env['PATH'].extend(self.base['PATH'])
 
     def _preload(self):
         """
         Setup method run prior to field initialisation.
         This may read some data in order to e.g. set environment variables.
         """
+        self._preload_paths()
         return None
 
     def load(self):
@@ -218,7 +233,7 @@ class Skin:
         self.fields = {}
         for name, field_desc in self._fields.items():
             field = field_desc.create(
-                data=self.overwritten_data.get(name, None),
+                data=self.overwrites.get(name, None),
                 skin=self,
                 **self._env
             ).load()

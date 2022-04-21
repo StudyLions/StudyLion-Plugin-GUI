@@ -47,6 +47,8 @@ class LeaderboardEntry:
 
 @fielded
 class LeaderboardSkin(Skin):
+    _card_id = "leaderboard"
+
     _env = {
         'scale': 2  # General size scale to match background resolution
     }

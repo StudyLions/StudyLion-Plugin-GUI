@@ -11,6 +11,8 @@ from .Avatars import avatar_manager
 
 @fielded
 class TasklistSkin(Skin):
+    _card_id = "tasklist"
+
     _env = {
         'scale': 2  # General size scale to match background resolution
     }

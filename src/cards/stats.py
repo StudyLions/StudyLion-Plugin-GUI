@@ -36,6 +36,8 @@ def format_time(seconds):
 
 @fielded
 class StatsSkin(Skin):
+    _card_id = "stats"
+
     _env = {
         'scale': 2  # General size scale to match background resolution
     }

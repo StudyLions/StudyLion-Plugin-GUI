@@ -63,6 +63,8 @@ class TimerBaseSkin(Skin):
 
 @fielded
 class TimerFocusSkin(TimerBaseSkin):
+    _card_id = "timer_focus"
+
     main_colour: ColourField = '#DDB21D'
     user_bg: AssetField = "timer/focus_user.png"
     mic_icon: AssetField = "timer/mute.png"
@@ -74,6 +76,8 @@ class TimerFocusSkin(TimerBaseSkin):
 
 @fielded
 class TimerBreakSkin(TimerBaseSkin):
+    _card_id = "timer_break"
+
     main_colour: ColourField = '#78B7EF'
     user_bg: AssetField = "timer/break_user.png"
     mic_icon: AssetField = "timer/unmute.png"

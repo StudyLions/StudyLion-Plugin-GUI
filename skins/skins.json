@@ -1,0 +1,7 @@
+{
+  "fallback": "original",
+  "skin_map": {
+    "original": "base",
+    "testing": "testing"
+  }
+}

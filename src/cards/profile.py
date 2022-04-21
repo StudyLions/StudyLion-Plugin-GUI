@@ -10,6 +10,8 @@ from .Skin import AssetPathField
 
 @fielded
 class ProfileSkin(Skin):
+    _card_id = "profile"
+
     _env = {
         'scale': 2  # General size scale to match background resolution
     }
