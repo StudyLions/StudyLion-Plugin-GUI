@@ -125,13 +125,13 @@ class LeaderboardPage(Card):
         self.image = None
 
     @classmethod
-    async def card_route(cls, executor, requestid, args, kwargs):
+    async def card_route(cls, runner, args, kwargs):
         entries = [LeaderboardEntry(*entry) for entry in kwargs['entries']]
         await asyncio.gather(
             *(entry.get_avatar() for entry in entries)
         )
         kwargs['entries'] = entries
-        return await super().card_route(executor, requestid, args, kwargs)
+        return await super().card_route(runner, args, kwargs)
 
     @classmethod
     def _execute(cls, *args, **kwargs):

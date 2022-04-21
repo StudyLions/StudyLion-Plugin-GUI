@@ -21,26 +21,19 @@ class Card:
         return await request(route=cls.server_route, args=args, kwargs=kwargs)
 
     @classmethod
-    async def card_route(cls, executor, requestid, args, kwargs):
+    async def card_route(cls, runner, args, kwargs):
         """
         Executed from the rendering server.
         Responsible for executing the rendering request and returning a BytesIO object with the image data.
-        TODO: Exception handling path
-        TODO: Logging
         """
-        to_execute = functools.partial(cls._execute, requestid, *args, **kwargs)
-        return await asyncio.get_event_loop().run_in_executor(executor, to_execute)
+        return await runner(cls._execute, args, kwargs)
 
     @classmethod
-    def _execute(cls, rqid, *args, **kwargs):
+    def _execute(cls, *args, **kwargs):
         """
         Synchronous method to execute inside the forked child.
         Should return the drawn card as a raw BytesIO object.
         """
-        # Manually set the logging requestid for this request
-        from ..server.logger import requestid
-        requestid.set(rqid)
-
         try:
             with closing(cls(*args, **kwargs)) as card:
                 response = card._execute_draw()

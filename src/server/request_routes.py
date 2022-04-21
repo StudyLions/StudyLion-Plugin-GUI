@@ -8,7 +8,7 @@ for card in registered:
     routes[card.server_route] = card.card_route
 
 
-async def ping(executor, rqid, args, kwargs):
+async def ping(runner, args, kwargs):
     logging.info("Ping-Pong!")
     return b"Pong"
 

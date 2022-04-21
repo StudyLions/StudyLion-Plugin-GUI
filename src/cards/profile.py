@@ -159,9 +159,9 @@ class ProfileCard(Card):
         self.image: Image = None  # Final Image
 
     @classmethod
-    async def card_route(cls, executor, requestid, args, kwargs):
+    async def card_route(cls, runner, args, kwargs):
         kwargs['avatar'] = await avatar_manager().get_avatar(*kwargs['avatar'], 256)
-        return await super().card_route(executor, requestid, args, kwargs)
+        return await super().card_route(runner, args, kwargs)
 
     @classmethod
     def _execute(cls, *args, **kwargs):

@@ -103,13 +103,13 @@ class TimerCard(Card):
         self.data_users = sorted(users, key=lambda user: user[1], reverse=True)  # (avatar, time)
 
     @classmethod
-    async def card_route(cls, executor, requestid, args, kwargs):
+    async def card_route(cls, runner, args, kwargs):
         if kwargs['users']:
             avatar_keys, times, tags = zip(*kwargs['users'])
             avatars = await avatar_manager().get_avatars(*((*key, 512) for key in avatar_keys))
             kwargs['users'] = tuple(zip(avatars, times, tags))
 
-        return await super().card_route(executor, requestid, args, kwargs)
+        return await super().card_route(runner, args, kwargs)
 
     @classmethod
     def _execute(cls, *args, **kwargs):

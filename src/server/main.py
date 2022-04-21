@@ -14,7 +14,7 @@ from .logger import requestid
 # TODO: General error handling, logging, and return paths for exceptions/null data
 # TODO: Move to config
 PATH = "gui.sock"
-MAX_PROC = 10
+MAX_PROC = 20
 
 executor: ProcessPoolExecutor = None
 
@@ -32,7 +32,7 @@ async def handle_request(reader, writer):
     if route in routes:
         start = time.time()
         try:
-            response = await routes[route](executor, rqid, args, kwargs)
+            response = await routes[route](runner, args, kwargs)
         except Exception:
             end = time.time()
             logging.error(
@@ -55,6 +55,34 @@ async def handle_request(reader, writer):
 
     writer.close()
     await writer.wait_closed()
+
+
+def _execute(rqid, method, args, kwargs):
+    try:
+        requestid.set(rqid)
+        return method(*args, **kwargs)
+    except Exception:
+        logging.error(
+            "Uncaught exception executing route:",
+            exc_info=True,
+            stack_info=True
+        )
+
+
+async def runner(method, args, kwargs):
+    """
+    Run the provided method in the executor.
+    Abstracts the executor implementation away from specific routes.
+    Also allows transparently sending variables into the execution context (e.g. rqid).
+    """
+    return await asyncio.get_event_loop().run_in_executor(
+        executor,
+        _execute,
+        requestid.get(),
+        method,
+        args,
+        kwargs
+    )
 
 
 def worker_configurer():
