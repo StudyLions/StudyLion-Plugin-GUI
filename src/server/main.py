@@ -7,7 +7,7 @@ import uuid
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 
-from .request_routes import routes
+from ..routes import routes
 from .logger import requestid
 
 

@@ -2,14 +2,16 @@ import math
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageOps
 
-from .Card import Card
-from .Avatars import avatar_manager
-from .Skin import fielded, Skin
-from .Skin import AssetField, NumberField, FontField, ColourField, PointField, ComputedField, StringField
+from ..base import Card, Layout, fielded, Skin
+from ..base.Avatars import avatar_manager
+from ..base.Skin import (
+    AssetField, StringField, NumberField,
+    FontField, ColourField, PointField, ComputedField
+)
 
 
 @fielded
-class TimerBaseSkin(Skin):
+class _TimerSkin(Skin):
     _env = {
         'scale': 2  # General size scale to match background resolution
     }
@@ -62,9 +64,7 @@ class TimerBaseSkin(Skin):
 
 
 @fielded
-class TimerFocusSkin(TimerBaseSkin):
-    _card_id = "timer_focus"
-
+class FocusTimerSkin(_TimerSkin):
     main_colour: ColourField = '#DDB21D'
     user_bg: AssetField = "timer/focus_user.png"
     mic_icon: AssetField = "timer/mute.png"
@@ -75,9 +75,7 @@ class TimerFocusSkin(TimerBaseSkin):
 
 
 @fielded
-class TimerBreakSkin(TimerBaseSkin):
-    _card_id = "timer_break"
-
+class BreakTimerSkin(_TimerSkin):
     main_colour: ColourField = '#78B7EF'
     user_bg: AssetField = "timer/break_user.png"
     mic_icon: AssetField = "timer/unmute.png"
@@ -87,42 +85,15 @@ class TimerBreakSkin(TimerBaseSkin):
     tag: AssetField = "timer/break_tag.png"
 
 
-class TimerCard(Card):
-    server_route = 'timer_card'
-
-    def __init__(self, name, remaining, duration, users, focus=True):
-        if focus:
-            self.skin = TimerFocusSkin().load()
-        else:
-            self.skin = TimerBreakSkin().load()
+class TimerLayout(Layout):
+    def __init__(self, skin, name, remaining, duration, users):
+        self.skin = skin
 
         self.data_name = name
         self.data_remaining = 5 * math.ceil(remaining / 5)
         self.data_duration = duration
         self.data_amount = 1 - remaining / duration
         self.data_users = sorted(users, key=lambda user: user[1], reverse=True)  # (avatar, time)
-
-    @classmethod
-    async def card_route(cls, runner, args, kwargs):
-        if kwargs['users']:
-            avatar_keys, times, tags = zip(*kwargs['users'])
-            avatars = await avatar_manager().get_avatars(*((*key, 512) for key in avatar_keys))
-            kwargs['users'] = tuple(zip(avatars, times, tags))
-
-        return await super().card_route(runner, args, kwargs)
-
-    @classmethod
-    def _execute(cls, *args, **kwargs):
-        if kwargs['users']:
-            avatar_data, times, tags = zip(*kwargs['users'])
-            avatars = []
-            for datum in avatar_data:
-                with BytesIO(datum) as buffer:
-                    buffer.seek(0)
-                    avatars.append(Image.open(buffer).convert('RGBA'))
-            kwargs['users'] = tuple(zip(avatars, times, tags))
-
-        return super()._execute(*args, **kwargs)
 
     @staticmethod
     def format_time(time, hours=True):
@@ -396,3 +367,43 @@ class TimerCard(Card):
         )
 
         return image
+
+
+class _TimerCard(Card):
+    layout = TimerLayout
+
+    @classmethod
+    async def card_route(cls, runner, args, kwargs):
+        if kwargs['users']:
+            avatar_keys, times, tags = zip(*kwargs['users'])
+            avatars = await avatar_manager().get_avatars(*((*key, 512) for key in avatar_keys))
+            kwargs['users'] = tuple(zip(avatars, times, tags))
+
+        return await super().card_route(runner, args, kwargs)
+
+    @classmethod
+    def _execute(cls, *args, **kwargs):
+        if kwargs['users']:
+            avatar_data, times, tags = zip(*kwargs['users'])
+            avatars = []
+            for datum in avatar_data:
+                with BytesIO(datum) as buffer:
+                    buffer.seek(0)
+                    avatars.append(Image.open(buffer).convert('RGBA'))
+            kwargs['users'] = tuple(zip(avatars, times, tags))
+
+        return super()._execute(*args, **kwargs)
+
+
+class FocusTimerCard(_TimerCard):
+    route = 'focus_timer_card'
+    card_id = 'focus_timer'
+
+    skin = FocusTimerSkin
+
+
+class BreakTimerCard(_TimerCard):
+    route = 'break_timer_card'
+    card_id = 'break_timer'
+
+    skin = BreakTimerSkin

@@ -5,16 +5,15 @@ from PIL import Image, ImageDraw
 from datetime import timedelta
 import datetime
 
-from .Card import Card
-from .Skin import fielded, Skin, FieldDesc
-from .Skin import AssetField, NumberField, FontField, ColourField, PointField, ComputedField, RawField, StringField
-from .Skin import AssetPathField
+from ..base import Card, Layout, fielded, Skin
+from ..base.Skin import (
+    AssetField, StringField, NumberField, RawField,
+    FontField, ColourField, PointField, ComputedField
+)
 
 
 @fielded
 class MonthlyStatsSkin(Skin):
-    _card_id = "monthly_stats"
-
     _env = {
         'scale': 2  # General size scale to match background resolution
     }
@@ -142,14 +141,12 @@ class MonthlyStatsSkin(Skin):
     date_gap: NumberField = 50
 
 
-class MonthlyStatsPage(Card):
-    server_route = 'monthly_card'
-
-    def __init__(self, name, discrim, sessions, date, current_streak, longest_streak, first_session_start):
+class MonthlyStatsPage(Layout):
+    def __init__(self, skin, name, discrim, sessions, date, current_streak, longest_streak, first_session_start):
         """
         `sessions` is a list of study sessions from the last two weeks.
         """
-        self.skin = MonthlyStatsSkin().load()
+        self.skin = skin
 
         self.data_sessions = sessions
         self.data_date = date
@@ -643,3 +640,11 @@ class MonthlyStatsPage(Card):
             image = Image.new('RGBA', self.skin.heatmap_mask.size)
             image.paste(colour, mask=self.skin.heatmap_mask)
             return image
+
+
+class MonthlyStatsCard(Card):
+    route = "monthly_stats_card"
+    card_id = "monthly_stats"
+
+    layout = MonthlyStatsPage
+    skin = MonthlyStatsSkin

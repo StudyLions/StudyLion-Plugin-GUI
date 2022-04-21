@@ -136,6 +136,7 @@ async def get_stats_card_for(ctx: Context, target):
         list(reversed(study_times)),
         workout_total,
         streaks,
+        skin=StatsCard.skin_args_for(ctx)
     )
 
 
@@ -211,6 +212,7 @@ async def get_profile_card_for(ctx: Context, target):
         current_rank=current_rank,
         next_rank=next_rank,
         badges=lion.profile_tags,
+        skin=ProfileCard.skin_args_for(ctx)
     )
 
 

@@ -7,7 +7,8 @@ from modules.stats import goals
 
 from ..module import module, ratelimit
 
-from ...cards import GoalPage, MonthlyStatsPage, WeeklyStatsPage
+from ...cards import WeeklyGoalCard, MonthlyGoalCard
+from ...cards import WeeklyStatsCard, MonthlyStatsCard
 from ...utils import get_avatar_key, image_as_file
 
 
@@ -56,7 +57,7 @@ async def _get_weekly_goals(ctx):
     else:
         acc_rate = None
 
-    goalpage = await GoalPage.request(
+    goalpage = await WeeklyGoalCard.request(
         name=ctx.author.name,
         discrim=f"#{ctx.author.discriminator}",
         avatar=get_avatar_key(ctx.client, ctx.author.id),
@@ -68,7 +69,7 @@ async def _get_weekly_goals(ctx):
         studied_goal=goal_row.study_goal,
         goals=tasklist,
         date=ctx.alion.day_start,
-        month=False
+        skin=WeeklyGoalCard.skin_args_for(ctx)
     )
     return goalpage
 
@@ -113,11 +114,12 @@ async def cmd_weekly(ctx):
 
     page_1_task = asyncio.create_task(_get_weekly_goals(ctx))
     page_2_task = asyncio.create_task(
-        WeeklyStatsPage.request(
+        WeeklyStatsCard.request(
             ctx.author.name,
             f"#{ctx.author.discriminator}",
             sessions,
-            day_start
+            day_start,
+            skin=WeeklyStatsCard.skin_args_for(ctx)
         )
     )
 
@@ -178,7 +180,7 @@ async def _get_monthly_goals(ctx):
     else:
         acc_rate = None
 
-    goalpage = await GoalPage.request(
+    goalpage = await MonthlyGoalCard.request(
         name=ctx.author.name,
         discrim=f"#{ctx.author.discriminator}",
         avatar=get_avatar_key(ctx.client, ctx.author.id),
@@ -190,7 +192,7 @@ async def _get_monthly_goals(ctx):
         studied_goal=goal_row.study_goal,
         goals=tasklist,
         date=ctx.alion.day_start,
-        month=True
+        skin=MonthlyGoalCard.skin_args_for(ctx)
     )
     return goalpage
 
@@ -297,14 +299,15 @@ async def cmd_monthly(ctx):
     first_session_start = sessions[-1][0]
     sessions = [session for session in sessions if session[1] > period_start]
     page_1_task = asyncio.create_task(_get_monthly_goals(ctx))
-    page_2_task = asyncio.create_task(MonthlyStatsPage.request(
+    page_2_task = asyncio.create_task(MonthlyStatsCard.request(
         ctx.author.name,
         f"#{ctx.author.discriminator}",
         sessions,
         day_start.date(),
         current_streak or 0,
         max_streak or 0,
-        first_session_start
+        first_session_start,
+        skin=MonthlyStatsCard.skin_args_for(ctx)
     ))
     await asyncio.gather(page_1_task, page_2_task)
     page_1 = page_1_task.result()

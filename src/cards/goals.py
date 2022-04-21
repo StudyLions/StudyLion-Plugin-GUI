@@ -2,28 +2,27 @@ import math
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageOps
 
-from .Card import Card
-from .Skin import fielded, Skin, FieldDesc
-from .Skin import AssetField, AssetPathField, StringField, NumberField, FontField, ColourField, PointField, ComputedField
-from .Avatars import avatar_manager
+from ..base import Card, Layout, fielded, Skin, FieldDesc
+from ..base.Avatars import avatar_manager
+from ..base.Skin import (
+    AssetField, AssetPathField, StringField, NumberField,
+    FontField, ColourField, PointField, ComputedField
+)
 
 
 @fielded
-class GoalSkin(Skin):
-    # TODO: Split into monthly/weekly
-    _card_id = 'goals'
+class _GoalSkin(Skin):
     _env = {
         'scale': 2  # General size scale to match background resolution
     }
 
     background: AssetField = "goals/background.png"
 
-    week_help_frame: AssetPathField = "weekly/help_frame.png"
-    month_help_frame: AssetPathField = "monthly/help_frame.png"
+    help_frame: AssetField = "weekly/help_frame.png"
 
     # Title section
     title_pre_gap: NumberField = 40
-    title_text: StringField = "MONTHLY STATISTICS"
+    title_text: StringField = ""
     title_font: FontField = ('ExtraBold', 76)
     title_size: ComputedField = lambda skin: skin.title_font.getsize(skin.title_text)
     title_colour: ColourField = '#DDB21D'
@@ -112,6 +111,7 @@ class GoalSkin(Skin):
     task_margin: PointField = (100, 50)
     task_column_sep: NumberField = 100
 
+    task_header: StringField = ""
     task_header_font: FontField = ('Black', 50)
     task_header_colour: ColourField = '#DDB21D'
     task_header_gap: NumberField = 25
@@ -145,15 +145,29 @@ class GoalSkin(Skin):
     date_gap: NumberField = 50
 
 
-class GoalPage(Card):
-    server_route = "goal_card"
+@fielded
+class WeeklyGoalSkin(_GoalSkin):
+    title_text: StringField = "WEEKLY STATISTICS"
+    task_header: StringField = "GOALS OF THE WEEK"
 
-    def __init__(self,
+    help_frame: AssetField = "weekly/help_frame.png"
+
+
+@fielded
+class MonthlyGoalSkin(_GoalSkin):
+    title_text: StringField = "MONTHLY STATISTICS"
+    task_header: StringField = "GOALS OF THE MONTH"
+
+    help_frame: AssetField = "monthly/help_frame.png"
+
+
+class GoalPage(Layout):
+    def __init__(self, skin,
                  name, discrim, avatar, badges,
                  tasks_done, studied_hours, attendance,
                  tasks_goal, studied_goal, goals,
-                 date, month=False):
-        self.skin = GoalSkin().load()
+                 date):
+        self.skin = skin
 
         self.data_name = name
         self.data_discrim = discrim
@@ -168,29 +182,8 @@ class GoalPage(Card):
         self.data_studied_goal = studied_goal
         self.data_goals = goals
         self.data_date = date
-        self.data_month = month
-
-        if month:
-            self.title_text = "MONTHLY STATISTICS"
-            self.task_header = "GOALS OF THE MONTH"
-        else:
-            self.title_text = "WEEKLY STATISTICS"
-            self.task_header = "GOALS OF THE WEEK"
-        self.title_size = self.skin.title_font.getsize(self.title_text)
 
         self.image = None
-
-    @classmethod
-    async def card_route(cls, runner, args, kwargs):
-        kwargs['avatar'] = await avatar_manager().get_avatar(*kwargs['avatar'], 256)
-        return await super().card_route(runner, args, kwargs)
-
-    @classmethod
-    def _execute(cls, *args, **kwargs):
-        with BytesIO(kwargs['avatar']) as image_data:
-            with Image.open(image_data).convert('RGBA') as avatar_image:
-                kwargs['avatar'] = avatar_image
-                return super()._execute(*args, **kwargs)
 
     def draw(self) -> Image:
         image = self.skin.background
@@ -199,17 +192,17 @@ class GoalPage(Card):
         xpos, ypos = 0, 0
 
         # Draw header text
-        xpos = (image.width - self.title_size[0]) // 2
+        xpos = (image.width - self.skin.title_size[0]) // 2
         ypos += self.skin.title_pre_gap
         draw.text(
             (xpos, ypos),
-            self.title_text,
+            self.skin.title_text,
             fill=self.skin.title_colour,
             font=self.skin.title_font
         )
 
         # Underline it
-        title_size = self.skin.title_font.getsize(self.title_text)
+        title_size = self.skin.title_size
         ypos += title_size[1] + self.skin.title_underline_gap
         draw.line(
             (xpos, ypos, xpos + title_size[0], ypos),
@@ -260,15 +253,10 @@ class GoalPage(Card):
                 ((image.width - progress_image.width) // 2, ypos)
             )
         else:
-            if self.data_month:
-                help_frame = Image.open(self.skin.month_help_frame).convert('RGBA')
-            else:
-                help_frame = Image.open(self.skin.week_help_frame).convert('RGBA')
-
-            ypos -= help_frame.height
+            ypos -= self.skin.help_frame.height
             image.alpha_composite(
-                help_frame,
-                ((image.width - help_frame.width) // 2, ypos)
+                self.skin.help_frame,
+                ((image.width - self.skin.help_frame.width) // 2, ypos)
             )
 
         self.image = image
@@ -285,13 +273,13 @@ class GoalPage(Card):
         # Draw header text
         draw.text(
             (xpos, ypos),
-            self.task_header,
+            self.skin.task_header,
             fill=self.skin.task_header_colour,
             font=self.skin.task_header_font
         )
 
         # Underline it
-        title_size = self.skin.task_header_font.getsize(self.task_header)
+        title_size = self.skin.task_header_font.getsize(self.skin.task_header)
         ypos += title_size[1] + self.skin.task_underline_gap
         draw.line(
             (xpos, ypos, xpos + title_size[0], ypos),
@@ -749,3 +737,33 @@ class GoalPage(Card):
         image.alpha_composite(canvas)
 
         return image
+
+
+class _GoalCard(Card):
+    layout = GoalPage
+
+    @classmethod
+    async def card_route(cls, runner, args, kwargs):
+        kwargs['avatar'] = await avatar_manager().get_avatar(*kwargs['avatar'], 256)
+        return await super().card_route(runner, args, kwargs)
+
+    @classmethod
+    def _execute(cls, *args, **kwargs):
+        with BytesIO(kwargs['avatar']) as image_data:
+            with Image.open(image_data).convert('RGBA') as avatar_image:
+                kwargs['avatar'] = avatar_image
+                return super()._execute(*args, **kwargs)
+
+
+class WeeklyGoalCard(_GoalCard):
+    route = "weekly_goal_card"
+    card_id = "weekly_goals"
+
+    skin = WeeklyGoalSkin
+
+
+class MonthlyGoalCard(_GoalCard):
+    route = "monthly_goal_card"
+    card_id = "monthly_goals"
+
+    skin = WeeklyGoalSkin

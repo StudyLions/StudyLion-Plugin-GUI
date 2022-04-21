@@ -1,17 +1,16 @@
 from io import BytesIO
 from PIL import Image, ImageDraw
 
-from .Card import Card
-from .Avatars import avatar_manager
-from .Skin import fielded, Skin, FieldDesc
-from .Skin import AssetField, NumberField, FontField, ColourField, PointField, ComputedField
-from .Skin import AssetPathField
+from ..base import Card, Layout, fielded, Skin, FieldDesc
+from ..base.Avatars import avatar_manager
+from ..base.Skin import (
+    AssetField, AssetPathField, NumberField,
+    FontField, ColourField, PointField, ComputedField
+)
 
 
 @fielded
 class ProfileSkin(Skin):
-    _card_id = "profile"
-
     _env = {
         'scale': 2  # General size scale to match background resolution
     }
@@ -123,10 +122,8 @@ class ProfileSkin(Skin):
     )
 
 
-class ProfileCard(Card):
-    server_route = 'profile_card'
-
-    def __init__(self, name, discrim,
+class ProfileLayout(Layout):
+    def __init__(self, skin, name, discrim,
                  coins, time, answers, attendance,
                  avatar,
                  badges=(),
@@ -135,9 +132,9 @@ class ProfileCard(Card):
                  next_rank=None,
                  draft=False, **kwargs):
 
-        self.draft = draft
+        self.skin = skin
 
-        self.skin = ProfileSkin().load()
+        self.draft = draft
 
         self.data_name = name
         self.data_discrim = discrim
@@ -157,18 +154,6 @@ class ProfileCard(Card):
         self.data_next_rank = next_rank
 
         self.image: Image = None  # Final Image
-
-    @classmethod
-    async def card_route(cls, runner, args, kwargs):
-        kwargs['avatar'] = await avatar_manager().get_avatar(*kwargs['avatar'], 256)
-        return await super().card_route(runner, args, kwargs)
-
-    @classmethod
-    def _execute(cls, *args, **kwargs):
-        with BytesIO(kwargs['avatar']) as image_data:
-            with Image.open(image_data).convert('RGBA') as avatar_image:
-                kwargs['avatar'] = avatar_image
-                return super()._execute(*args, **kwargs)
 
     def draw(self):
         # Load/copy background
@@ -577,3 +562,23 @@ class ProfileCard(Card):
             )
             bar = Image.composite(_bar, self.skin.bar_empty, self.skin.bar_empty)
             return bar
+
+
+class ProfileCard(Card):
+    route = 'profile_card'
+    card_id = 'profile'
+
+    layout = ProfileLayout
+    skin = ProfileSkin
+
+    @classmethod
+    async def card_route(cls, runner, args, kwargs):
+        kwargs['avatar'] = await avatar_manager().get_avatar(*kwargs['avatar'], 256)
+        return await super().card_route(runner, args, kwargs)
+
+    @classmethod
+    def _execute(cls, *args, **kwargs):
+        with BytesIO(kwargs['avatar']) as image_data:
+            with Image.open(image_data).convert('RGBA') as avatar_image:
+                kwargs['avatar'] = avatar_image
+                return super()._execute(*args, **kwargs)

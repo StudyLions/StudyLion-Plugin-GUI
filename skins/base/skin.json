@@ -1,13 +1,14 @@
 {
   "name": "Original",
   "description": "The original base skin.",
+  "price": 5000,
   "asset_root": "assets",
   "properties": {
     "stats": {
-      "header_colour": "#FF00FF"
+    },
+    "profile": {
     },
     "weekly_stats": {
-      "title_colour": "#0000FF"
     }
   }
 }

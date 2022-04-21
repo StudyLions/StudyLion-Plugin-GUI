@@ -3,16 +3,16 @@ import pickle
 
 from PIL import Image, ImageDraw
 
-from .Card import Card
-from .Skin import fielded, Skin, FieldDesc
-from .Skin import AssetField, NumberField, FontField, ColourField, ComputedField, RawField, StringField, PointField
-from .Avatars import avatar_manager
+from ..base import Card, Layout, fielded, Skin, FieldDesc
+from ..base.Avatars import avatar_manager
+from ..base.Skin import (
+    AssetField, StringField, NumberField,
+    FontField, ColourField, PointField, ComputedField
+)
 
 
 @fielded
 class TasklistSkin(Skin):
-    _card_id = "tasklist"
-
     _env = {
         'scale': 2  # General size scale to match background resolution
     }
@@ -91,11 +91,9 @@ class TasklistSkin(Skin):
     date_gap: NumberField = 50
 
 
-class Tasklist(Card):
-    server_route = 'tasklist'
-
-    def __init__(self, name, discrim, tasks, date, avatar, badges=()):
-        self.skin = TasklistSkin().load()
+class TasklistLayout(Layout):
+    def __init__(self, skin, name, discrim, tasks, date, avatar, badges=()):
+        self.skin = skin
 
         self.data_name = name
         self.data_discrim = discrim
@@ -106,23 +104,6 @@ class Tasklist(Card):
 
         self.tasks_drawn = 0
         self.images = []
-
-    @classmethod
-    async def request(cls, *args, **kwargs):
-        data = await super().request(*args, **kwargs)
-        return pickle.loads(data)
-
-    @classmethod
-    async def card_route(cls, runner, args, kwargs):
-        kwargs['avatar'] = await avatar_manager().get_avatar(*kwargs['avatar'], 256)
-        return await super().card_route(runner, args, kwargs)
-
-    @classmethod
-    def _execute(cls, *args, **kwargs):
-        with BytesIO(kwargs['avatar']) as image_data:
-            with Image.open(image_data).convert('RGBA') as avatar_image:
-                kwargs['avatar'] = avatar_image
-                return super()._execute(*args, **kwargs)
 
     def _execute_draw(self):
         image_data = []
@@ -140,6 +121,11 @@ class Tasklist(Card):
             self.images.append(self._draw_another_page())
 
         return self.images
+
+    def close(self):
+        if self.images:
+            for image in self.images:
+                image.close()
 
     def _draw_first_page(self) -> Image:
         image = self.skin.first_page_bg
@@ -424,3 +410,28 @@ class Tasklist(Card):
             y += height + self.skin.task_intra_gap
 
         return image
+
+
+class TasklistCard(Card):
+    route = 'tasklist_card'
+    card_id = 'tasklist'
+
+    layout = TasklistLayout
+    skin = TasklistSkin
+
+    @classmethod
+    async def request(cls, *args, **kwargs):
+        data = await super().request(*args, **kwargs)
+        return pickle.loads(data)
+
+    @classmethod
+    async def card_route(cls, runner, args, kwargs):
+        kwargs['avatar'] = await avatar_manager().get_avatar(*kwargs['avatar'], 256)
+        return await super().card_route(runner, args, kwargs)
+
+    @classmethod
+    def _execute(cls, *args, **kwargs):
+        with BytesIO(kwargs['avatar']) as image_data:
+            with Image.open(image_data).convert('RGBA') as avatar_image:
+                kwargs['avatar'] = avatar_image
+                return super()._execute(*args, **kwargs)

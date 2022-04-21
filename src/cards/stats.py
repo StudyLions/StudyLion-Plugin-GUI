@@ -2,10 +2,11 @@ import itertools
 from datetime import datetime, timedelta
 from PIL import Image, ImageDraw
 
-from ..utils import asset_path, inter_font
-from .Card import Card
-from .Skin import fielded, Skin
-from .Skin import AssetField, StringField, NumberField, FontField, ColourField, PointField, ComputedField, RawField
+from ..base import Card, Layout, fielded, Skin
+from ..base.Skin import (
+    AssetField, StringField, NumberField, RawField,
+    FontField, ColourField, PointField, ComputedField
+)
 
 
 def format_lb(pos):
@@ -36,8 +37,6 @@ def format_time(seconds):
 
 @fielded
 class StatsSkin(Skin):
-    _card_id = "stats"
-
     _env = {
         'scale': 2  # General size scale to match background resolution
     }
@@ -134,13 +133,11 @@ class StatsSkin(Skin):
     )
 
 
-class StatsCard(Card):
-    server_route = "stats_card"
-
-    def __init__(self, lb_data, time_data, workouts, streak_data, date=None, draft=False, **kwargs):
+class StatsLayout(Layout):
+    def __init__(self, skin, lb_data, time_data, workouts, streak_data, date=None, draft=False, **kwargs):
         self.draft = draft
 
-        self.skin = StatsSkin().load()
+        self.skin = skin
 
         self.data_lb_time = lb_data[0]  # Position on time leaderboard, or None
         self.data_lb_lc = lb_data[1]  # Position on coin leaderboard, or None
@@ -479,3 +476,11 @@ class StatsCard(Card):
             )
 
         return cal
+
+
+class StatsCard(Card):
+    route = 'stats_card'
+    card_id = 'stats'
+
+    layout = StatsLayout
+    skin = StatsSkin

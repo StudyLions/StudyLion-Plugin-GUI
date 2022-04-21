@@ -2,11 +2,12 @@ import asyncio
 from io import BytesIO
 from PIL import Image, ImageDraw
 
-from .Card import Card
-from .Avatars import avatar_manager
-from .Skin import fielded, Skin, FieldDesc
-from .Skin import AssetField, NumberField, FontField, ColourField, PointField, ComputedField, StringField
-from .Skin import AssetPathField
+from ..base import Card, Layout, fielded, Skin, FieldDesc
+from ..base.Avatars import avatar_manager
+from ..base.Skin import (
+    AssetField, AssetPathField, StringField, NumberField,
+    FontField, ColourField, PointField, ComputedField
+)
 
 
 class LeaderboardEntry:
@@ -47,8 +48,6 @@ class LeaderboardEntry:
 
 @fielded
 class LeaderboardSkin(Skin):
-    _card_id = "leaderboard"
-
     _env = {
         'scale': 2  # General size scale to match background resolution
     }
@@ -111,11 +110,9 @@ class LeaderboardSkin(Skin):
     entry_gap: NumberField = 13
 
 
-class LeaderboardPage(Card):
-    server_route = 'leaderboard_card'
-
-    def __init__(self, server_name, entries, highlight=None):
-        self.skin = LeaderboardSkin().load()
+class LeaderboardPage(Layout):
+    def __init__(self, skin, server_name, entries, highlight=None):
+        self.skin = skin
 
         self.server_name = server_name
         self.entries = entries
@@ -123,21 +120,6 @@ class LeaderboardPage(Card):
         self.first_page = any(entry.position in (1, 2, 3) for entry in entries)
 
         self.image = None
-
-    @classmethod
-    async def card_route(cls, runner, args, kwargs):
-        entries = [LeaderboardEntry(*entry) for entry in kwargs['entries']]
-        await asyncio.gather(
-            *(entry.get_avatar() for entry in entries)
-        )
-        kwargs['entries'] = entries
-        return await super().card_route(runner, args, kwargs)
-
-    @classmethod
-    def _execute(cls, *args, **kwargs):
-        for entry in kwargs['entries']:
-            entry.convert_avatar()
-        return super()._execute(*args, **kwargs)
 
     def draw(self) -> Image:
         if self.first_page:
@@ -514,3 +496,26 @@ class LeaderboardPage(Card):
 #     page = LeaderboardPage("The Study Lions", entries, highlight=15)
 #     image = page.draw()
 #     image.save("lb_page.png")
+
+
+class LeaderboardCard(Card):
+    route = 'leaderboard_card'
+    card_id = 'leaderboard'
+
+    layout = LeaderboardPage
+    skin = LeaderboardSkin
+
+    @classmethod
+    async def card_route(cls, runner, args, kwargs):
+        entries = [LeaderboardEntry(*entry) for entry in kwargs['entries']]
+        await asyncio.gather(
+            *(entry.get_avatar() for entry in entries)
+        )
+        kwargs['entries'] = entries
+        return await super().card_route(runner, args, kwargs)
+
+    @classmethod
+    def _execute(cls, *args, **kwargs):
+        for entry in kwargs['entries']:
+            entry.convert_avatar()
+        return super()._execute(*args, **kwargs)

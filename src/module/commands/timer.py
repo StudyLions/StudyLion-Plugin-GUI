@@ -11,7 +11,7 @@ from meta import client
 
 from modules.study.timers.Timer import Timer
 
-from ...cards import TimerCard
+from ...cards import FocusTimerCard, BreakTimerCard
 
 from ...utils import get_avatar_key, image_as_file, edit_files, asset_path
 
@@ -28,12 +28,13 @@ async def status(self):
          session.data.tag if session else None)
         for member in self.members
     ]
-    page = await TimerCard.request(
+    card_class = FocusTimerCard if (stage.name == 'FOCUS') else BreakTimerCard
+    page = await card_class.request(
         name,
         remaining,
         duration,
         users=users,
-        focus=(stage.name == 'FOCUS')
+        skin=card_class.skin_args_for(guildid=self.data.guildid)
     )
 
     return {'files': [image_as_file(page, name="timer.png")]}

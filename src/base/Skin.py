@@ -2,7 +2,7 @@ import time
 import logging
 
 from PIL import Image
-from ..utils import asset_path, inter_font, GUISkin, resolve_asset_path
+from ..utils import inter_font, GUISkin, resolve_asset_path
 
 
 class Field:
@@ -181,8 +181,6 @@ class FieldDesc:
 
 
 class Skin:
-    _card_id = None
-
     # Field specifiers, describing the skin fields
     _fields = {
     }  # type: dict[str, FieldDesc]
@@ -192,8 +190,10 @@ class Skin:
     _env = {
     }
 
-    def __init__(self, base_skin_id=None, **kwargs):
-        self.base = GUISkin.get(base_skin_id).for_card(self._card_id)
+    def __init__(self, card_id, base_skin_id=None, **kwargs):
+        self.card_id = card_id
+
+        self.base = GUISkin.get(base_skin_id).for_card(self.card_id)
         self.overwrites = {**self.base, **kwargs}
         self.fields = None
 

@@ -6,7 +6,7 @@ from meta import client
 
 from modules.todo.Tasklist import Tasklist as TextTasklist
 
-from ...cards import Tasklist
+from ...cards import TasklistCard
 from ...utils import get_avatar_key, image_as_file, edit_files
 
 
@@ -43,13 +43,14 @@ class GUITasklist(TextTasklist):
         avatar = get_avatar_key(client, self.member.id)
         lion = Lion.fetch(self.member.guild.id, self.member.id)
         date = lion.day_start
-        self.pages = await Tasklist.request(
+        self.pages = await TasklistCard.request(
             self.member.name,
             f"#{self.member.discriminator}",
             tasks,
             date,
             avatar=avatar,
-            badges=lion.profile_tags
+            badges=lion.profile_tags,
+            skin=TasklistCard.skin_args_for(guildid=self.member.guild.id, userid=self.member.id)
         )
 
         return self.pages

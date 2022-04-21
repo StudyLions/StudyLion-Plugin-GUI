@@ -1,18 +1,18 @@
+import os
 import math
 from PIL import Image, ImageDraw
 from datetime import timedelta
 
-from .Card import Card
-from .Skin import fielded, Skin
-from .Skin import AssetField, RGBAAssetField, NumberField, FontField, ColourField, ComputedField, RawField, StringField
-
-from ..utils import asset_path
+from ..utils import resolve_asset_path
+from ..base import Card, Layout, fielded, Skin
+from ..base.Skin import (
+    AssetField, RGBAAssetField, StringField, NumberField, RawField,
+    FontField, ColourField, ComputedField
+)
 
 
 @fielded
 class WeeklyStatsSkin(Skin):
-    _card_id = "weekly_stats"
-
     _env = {
         'scale': 1  # General size scale to match background resolution
     }
@@ -91,9 +91,14 @@ class WeeklyStatsSkin(Skin):
     btm_bar_vert_colour: ColourField = "#042231B2"
     btm_bar_weekday_colour: ColourField = "#F9CDB77F"
 
-    # TODO: These should be better exposed to the skin
+    btm_emoji_path: StringField = "weekly/bottom/emojis"
     btm_emojis: ComputedField = lambda skin: {
-        state: Image.open(asset_path(f'weekly/bottom/emojis/{state}.png')).convert('RGBA')
+        state: Image.open(
+            resolve_asset_path(
+                skin._env['PATH'],
+                os.path.join(skin.btm_emoji_path, f"{state}.png")
+            )
+        ).convert('RGBA')
         for state in ('very_happy', 'happy', 'neutral', 'sad', 'shocked')
     }
 
@@ -116,14 +121,12 @@ class WeeklyStatsSkin(Skin):
     date_gap: NumberField = 50
 
 
-class WeeklyStatsPage(Card):
-    server_route = 'weekly_card'
-
-    def __init__(self, name, discrim, sessions, date):
+class WeeklyStatsPage(Layout):
+    def __init__(self, skin, name, discrim, sessions, date):
         """
         `sessions` is a list of study sessions from the last two weeks.
         """
-        self.skin = WeeklyStatsSkin().load()
+        self.skin = skin
 
         self.data_sessions = sessions
         self.data_date = date
@@ -605,3 +608,11 @@ class WeeklyStatsPage(Card):
         )
 
         return image
+
+
+class WeeklyStatsCard(Card):
+    route = 'weekly_stats_card'
+    card_id = 'weekly_stats'
+
+    layout = WeeklyStatsPage
+    skin = WeeklyStatsSkin

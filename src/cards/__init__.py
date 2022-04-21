@@ -1,24 +1,8 @@
-from .Card import Card
-
-from .test import TestCard
-from .stats import StatsCard, StatsSkin
-from .profile import ProfileCard, ProfileSkin
-from .goals import GoalPage, GoalSkin
-from .monthly import MonthlyStatsPage, MonthlyStatsSkin
-from .weekly import WeeklyStatsPage, WeeklyStatsSkin
-from .tasklist import Tasklist, TasklistSkin
-from .leaderboard import LeaderboardPage, LeaderboardSkin, LeaderboardEntry
-from .timer import TimerCard, TimerBreakSkin, TimerFocusSkin
-
-
-registered = (
-    TestCard,
-    StatsCard,
-    ProfileCard,
-    GoalPage,
-    MonthlyStatsPage,
-    WeeklyStatsPage,
-    Tasklist,
-    LeaderboardPage,
-    TimerCard
-)
+from .stats import StatsCard
+from .profile import ProfileCard
+from .goals import WeeklyGoalCard, MonthlyGoalCard
+from .monthly import MonthlyStatsCard
+from .weekly import WeeklyStatsCard
+from .tasklist import TasklistCard
+from .leaderboard import LeaderboardCard
+from .timer import BreakTimerCard, FocusTimerCard

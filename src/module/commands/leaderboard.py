@@ -7,7 +7,7 @@ import data
 from data import tables
 from utils.interactive import discord_shield
 
-from ...cards import LeaderboardPage
+from ...cards import LeaderboardCard
 from ...utils import image_as_file, edit_files, get_avatar_key
 
 from ..module import module, ratelimit
@@ -84,7 +84,12 @@ async def cmd_top(ctx):
     author_page = (author_rank - 1) // 10 if author_rank is not None else None
 
     if page_count == 1:
-        image = await LeaderboardPage.request(ctx.guild.name, entries=entry_pages[0], highlight=author_rank)
+        image = await LeaderboardCard.request(
+            ctx.guild.name,
+            entries=entry_pages[0],
+            highlight=author_rank,
+            skin=LeaderboardCard.skin_args_for(ctx)
+        )
         _file = image_as_file(image, "leaderboard.png")
         await ctx.reply(file=_file)
         del image
@@ -99,10 +104,11 @@ async def cmd_top(ctx):
                 _future = _existing
             else:
                 _future = asyncio.create_task(
-                    LeaderboardPage.request(
+                    LeaderboardCard.request(
                         ctx.guild.name,
                         entries=entry_pages[i % page_count],
-                        highlight=author_rank
+                        highlight=author_rank,
+                        skin=LeaderboardCard.skin_args_for(ctx)
                     )
                 )
                 page_futures[i] = _future
