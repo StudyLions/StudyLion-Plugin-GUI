@@ -2,7 +2,8 @@ import time
 import logging
 
 from PIL import Image
-from ..utils import inter_font, GUISkin, resolve_asset_path
+from ..utils import inter_font, resolve_asset_path
+from .AppSkin import AppSkin
 
 
 class Field:
@@ -193,7 +194,7 @@ class Skin:
     def __init__(self, card_id, base_skin_id=None, **kwargs):
         self.card_id = card_id
 
-        self.base = GUISkin.get(base_skin_id).for_card(self.card_id)
+        self.base = AppSkin.get(base_skin_id).for_card(self.card_id)
         self.overwrites = {**self.base, **kwargs}
         self.fields = None
 
@@ -203,7 +204,7 @@ class Skin:
         """
         return self.overwrites
 
-    def apply_overwrites(self, base_skin_id=None, **kwargs):
+    def apply_overwrites(self, **kwargs):
         self.overwrites.update(kwargs)
 
     def _preload_paths(self):

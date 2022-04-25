@@ -64,11 +64,12 @@ class Card:
             return b''
 
     @classmethod
-    def skin_args_for(cls, ctx=None, userid=None, guildid=None, **kwargs):
+    def skin_args_for(cls, userid=None, guildid=None, **kwargs):
         """
-        Obtain the appropriate skin arguments for the provided cmdClient Context.
+        Resolve the skin arguments for the given guild and user.
+        Expected to be overridden by dynamic patch.
+        TODO: Find cleaner way of doing this.
         """
-        # TODO
         return {}
 
     @classmethod
