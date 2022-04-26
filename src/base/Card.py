@@ -1,3 +1,4 @@
+import os
 import gc
 from contextlib import closing
 import logging
@@ -29,7 +30,12 @@ class Card:
         By default, forwards the request straight to the rendering server.
         It may be useful to perform pre-request processing on the arguments.
         """
-        return await request(route=cls.route, args=args, kwargs=kwargs)
+        if os.name == 'nt':
+            async def runner(method, args, kwargs):
+                return method(*args, **kwargs)
+            return await cls.card_route(runner, args, kwargs)
+        else:
+            return await request(route=cls.route, args=args, kwargs=kwargs)
 
     @classmethod
     async def card_route(cls, runner, args, kwargs):
