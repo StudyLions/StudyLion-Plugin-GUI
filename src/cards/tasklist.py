@@ -419,6 +419,8 @@ class TasklistCard(Card):
     layout = TasklistLayout
     skin = TasklistSkin
 
+    display_name = "Tasklist"
+
     @classmethod
     async def request(cls, *args, **kwargs):
         data = await super().request(*args, **kwargs)

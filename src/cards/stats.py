@@ -484,3 +484,15 @@ class StatsCard(Card):
 
     layout = StatsLayout
     skin = StatsSkin
+
+    display_name = "User Stats"
+
+    @classmethod
+    async def sample_args(cls, ctx, **kwargs):
+        return {
+            'lb_data': (21, 123),
+            'time_data': (3600, 5 * 24 * 3600, 1.5 * 24 * 3600, 100 * 24 * 3600),
+            'workouts': 50,
+            'streak_data': [(1, 3), (7, 8), (10, 10), (12, 16), (18, 25), (27, 31)],
+            'date': datetime(2022, 2, 1)
+        }

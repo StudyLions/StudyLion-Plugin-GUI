@@ -505,6 +505,8 @@ class LeaderboardCard(Card):
     layout = LeaderboardPage
     skin = LeaderboardSkin
 
+    display_name = "Leaderboard"
+
     @classmethod
     async def card_route(cls, runner, args, kwargs):
         entries = [LeaderboardEntry(*entry) for entry in kwargs['entries']]

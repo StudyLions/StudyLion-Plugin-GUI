@@ -2,6 +2,7 @@ import gc
 from contextlib import closing
 import logging
 
+from ..utils import image_as_file
 from ..client import request
 from .Layout import Layout
 from .Skin import Skin
@@ -71,6 +72,12 @@ class Card:
         TODO: Find cleaner way of doing this.
         """
         return {}
+
+    @classmethod
+    async def generate_sample(cls, ctx=None, **kwargs):
+        sample_kwargs = await cls.sample_args(ctx)
+        card = await cls.request(**{**sample_kwargs, **kwargs})
+        return image_as_file(card, "sample.png")
 
     @classmethod
     async def sample_args(cls, ctx, **kwargs):

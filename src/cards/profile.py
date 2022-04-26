@@ -1,6 +1,7 @@
 from io import BytesIO
 from PIL import Image, ImageDraw
 
+from ..utils import get_avatar_key
 from ..base import Card, Layout, fielded, Skin, FieldDesc
 from ..base.Avatars import avatar_manager
 from ..base.Skin import (
@@ -571,6 +572,8 @@ class ProfileCard(Card):
     layout = ProfileLayout
     skin = ProfileSkin
 
+    display_name = "User Profile"
+
     @classmethod
     async def card_route(cls, runner, args, kwargs):
         kwargs['avatar'] = await avatar_manager().get_avatar(*kwargs['avatar'], 256)
@@ -582,3 +585,19 @@ class ProfileCard(Card):
             with Image.open(image_data).convert('RGBA') as avatar_image:
                 kwargs['avatar'] = avatar_image
                 return super()._execute(*args, **kwargs)
+
+    @classmethod
+    async def sample_args(cls, ctx, **kwargs):
+        return {
+            'name': ctx.author.name,
+            'discrim': ctx.author.discriminator,
+            'avatar': get_avatar_key(ctx.client, ctx.author.id),
+            'coins': 58596,
+            'time': 3750 * 3600,
+            'answers': 10,
+            'attendance': 0.9,
+            'badges': ('MEDICINE', 'NEUROSCIENCE', 'BIO', 'MATHS', 'BACHELOR\'S DEGREE', 'VEGAN SOMETIMES', 'EUROPE'),
+            'achievements': (0, 2, 5, 7),
+            'current_rank': ('VAMPIRE', 3000, 4000),
+            'next_rank': ('WIZARD', 4000, 8000),
+        }

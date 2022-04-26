@@ -761,9 +761,13 @@ class WeeklyGoalCard(_GoalCard):
 
     skin = WeeklyGoalSkin
 
+    display_name = "Weekly Goals"
+
 
 class MonthlyGoalCard(_GoalCard):
     route = "monthly_goal_card"
     card_id = "monthly_goals"
 
     skin = WeeklyGoalSkin
+
+    display_name = "Monthly Goals"

@@ -616,3 +616,5 @@ class WeeklyStatsCard(Card):
 
     layout = WeeklyStatsPage
     skin = WeeklyStatsSkin
+
+    display_name = "Weekly Stats"

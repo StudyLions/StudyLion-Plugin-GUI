@@ -648,3 +648,5 @@ class MonthlyStatsCard(Card):
 
     layout = MonthlyStatsPage
     skin = MonthlyStatsSkin
+
+    display_name = "Monthly Stats"

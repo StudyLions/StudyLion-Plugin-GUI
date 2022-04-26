@@ -400,6 +400,7 @@ class FocusTimerCard(_TimerCard):
     card_id = 'focus_timer'
 
     skin = FocusTimerSkin
+    display_name = "Focus Timer"
 
 
 class BreakTimerCard(_TimerCard):
@@ -407,3 +408,4 @@ class BreakTimerCard(_TimerCard):
     card_id = 'break_timer'
 
     skin = BreakTimerSkin
+    display_name = "Break Timer"
