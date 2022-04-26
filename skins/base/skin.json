@@ -1,6 +1,7 @@
 {
-  "name": "Original",
+  "display_name": "Original",
   "description": "The original base skin.",
+  "public": true,
   "price": 5000,
   "asset_root": "assets",
   "properties": {

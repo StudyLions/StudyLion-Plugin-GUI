@@ -1,11 +1,12 @@
 import json
+from cachetools import TTLCache
 
 from ..utils import skin_path_join
 
 
 class AppSkin:
     skins_data = json.load(open(skin_path_join('skins.json'), 'r'))
-    gui_skin_cache = {}
+    gui_skin_cache = TTLCache(1024, ttl=60)
 
     def __init__(self, skin_id):
         # Global skin text identifier
@@ -18,10 +19,38 @@ class AppSkin:
         self.skin_data = json.load(open(skin_path_join(self.skin_path, 'skin.json'), 'r'))
         self.parents = [AppSkin.get(skin_id) for skin_id in self.skin_data.get('parents', [])]
 
+        self.display_name = self.skin_data.get('display_name', "Unnamed")
+        self.description = self.skin_data.get('description', "No Description")
+        self.price = self.skin_data.get('price', 0)
+
+        self.public = self.skin_data.get('public', False)
+
+        if (guild_whitelist := self.skin_data.get('guild_whitelist', None)) is not None:
+            self.guild_whitelist = set(int(item) for item in guild_whitelist)
+        else:
+            self.guild_whitelist = None
+
+        if (user_whitelist := self.skin_data.get('user_whitelist', None)) is not None:
+            self.user_whitelist = set(int(item) for item in user_whitelist)
+        else:
+            self.user_whitelist = None
+
     @classmethod
-    def get(cls, skin_id):
-        # TODO: Caching
-        return cls(skin_id)
+    def get(cls, skin_id, use_cache=True):
+        if use_cache and skin_id in cls.gui_skin_cache:
+            appskin = cls.gui_skin_cache[skin_id]
+        else:
+            appskin = cls.gui_skin_cache[skin_id] = cls(skin_id)
+
+        return appskin
+
+    @classmethod
+    def get_all(cls, use_cache=True):
+        """
+        Generator yielding all the available app skins.
+        """
+        for skin_id in cls.skins_data['skin_map'].keys():
+            yield cls(skin_id)
 
     def for_card(self, card_id):
         asset_path = []
