@@ -1,4 +1,5 @@
 import math
+import datetime
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageOps
 
@@ -8,6 +9,8 @@ from ..base.Skin import (
     AssetField, AssetPathField, StringField, NumberField,
     FontField, ColourField, PointField, ComputedField
 )
+
+from ..utils import get_avatar_key
 
 
 @fielded
@@ -763,11 +766,61 @@ class WeeklyGoalCard(_GoalCard):
 
     display_name = "Weekly Goals"
 
+    @classmethod
+    async def sample_args(cls, ctx, **kwargs):
+        return {
+            'name': ctx.author.name,
+            'discrim': '#' + ctx.author.discriminator,
+            'avatar': get_avatar_key(ctx.client, ctx.author.id),
+            'badges': (
+                'STUDYING: MEDICINE',
+                'HOBBY: MATHS',
+                'CAREER: STUDENT',
+                'FROM: EUROPE',
+                'LOVES CATS <3'
+            ),
+            'tasks_done': 100,
+            'tasks_goal': 300,
+            'studied_hours': 16,
+            'studied_goal': 48,
+            'attendance': 0.9,
+            'goals': [(0, 'Write a 200 page thesis', False),
+                      (1, 'Feed the kangaroo', True),
+                      (2, 'Cure world hunger', False),
+                      (3, 'Finish assignment 2', True)],
+            'date': datetime.datetime.now()
+        }
+
 
 class MonthlyGoalCard(_GoalCard):
     route = "monthly_goal_card"
     card_id = "monthly_goals"
 
-    skin = WeeklyGoalSkin
+    skin = MonthlyGoalSkin
 
     display_name = "Monthly Goals"
+
+    @classmethod
+    async def sample_args(cls, ctx, **kwargs):
+        return {
+            'name': ctx.author.name,
+            'discrim': '#' + ctx.author.discriminator,
+            'avatar': get_avatar_key(ctx.client, ctx.author.id),
+            'badges': (
+                'STUDYING: MEDICINE',
+                'HOBBY: MATHS',
+                'CAREER: STUDENT',
+                'FROM: EUROPE',
+                'LOVES CATS <3'
+            ),
+            'tasks_done': 400,
+            'tasks_goal': 1200,
+            'studied_hours': 64,
+            'studied_goal': 128,
+            'attendance': 0.95,
+            'goals': [(0, 'Meet 10 new people', False),
+                      (1, 'Feed the lion', False),
+                      (2, 'Realise I am awesome', False),
+                      (3, 'Never going to give you up', True)],
+            'date': datetime.datetime.now()
+        }

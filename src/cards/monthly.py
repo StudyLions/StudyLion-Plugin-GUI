@@ -650,3 +650,44 @@ class MonthlyStatsCard(Card):
     skin = MonthlyStatsSkin
 
     display_name = "Monthly Stats"
+
+    @classmethod
+    async def sample_args(cls, ctx, **kwargs):
+        import random
+        from datetime import timezone, datetime, timedelta
+
+        sessions = []
+        streak = 0
+        longest_streak = 0
+        day_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        day_start -= timedelta(hours=24) * 120
+        for day in range(0, 120):
+            day_start += timedelta(hours=24)
+
+            roll = random.randint(0, 30)
+            if roll == 0:
+                longest_streak = max(streak, longest_streak)
+                streak = 0
+                continue
+            else:
+                streak += 1
+
+            # start of day
+            pointer = 6 * 60
+            session_duration = int(abs(random.normalvariate(8 * 60, 2 * 60)))
+            sessions.append((
+                day_start + timedelta(minutes=pointer),
+                day_start + timedelta(minutes=(pointer + session_duration)),
+            )
+            )
+        longest_streak = max(streak, longest_streak)
+
+        return {
+            'name': ctx.author.name,
+            'discrim': '#' + ctx.author.discriminator,
+            'sessions': sessions,
+            'date': datetime.now(timezone.utc).date(),
+            'current_streak': streak,
+            'longest_streak': longest_streak,
+            'first_session_start': day_start - timedelta(days=200)
+        }

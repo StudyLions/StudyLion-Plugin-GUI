@@ -521,3 +521,24 @@ class LeaderboardCard(Card):
         for entry in kwargs['entries']:
             entry.convert_avatar()
         return super()._execute(*args, **kwargs)
+
+    @classmethod
+    async def sample_args(cls, ctx, **kwargs):
+        from ..utils import get_avatar_key
+
+        return {
+            'server_name': ctx.guild.name if ctx.guild else f"{ctx.author.name}'s DMs",
+            'entries': [
+                (ctx.author.id, 1, 1474481, ctx.author.name, get_avatar_key(ctx.client, ctx.author.id)),
+                (1, 2, 1445975, 'Abioye', (0, None)),
+                (2, 3, 1127296, 'Lacey', (0, None)),
+                (3, 4, 1112495, 'Chesed', (0, None)),
+                (4, 5, 854514, 'Almas', (0, None)),
+                (5, 6, 824414, 'Uche', (0, None)),
+                (6, 7, 634560, 'Boitumelo', (0, None)),
+                (7, 8, 540633, 'Abimbola', (0, None)),
+                (8, 9, 417487, 'Keone', (0, None)),
+                (9, 10, 257274, 'Desta', (0, None))
+            ],
+            'highlight': 1
+        }

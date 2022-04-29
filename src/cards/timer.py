@@ -402,6 +402,25 @@ class FocusTimerCard(_TimerCard):
     skin = FocusTimerSkin
     display_name = "Focus Timer"
 
+    @classmethod
+    async def sample_args(cls, ctx, **kwargs):
+        from ..utils import get_avatar_key
+
+        return {
+            'name': 'Pomodoro Timer',
+            'remaining': 1658,
+            'duration': 3000,
+            'users': [
+                (get_avatar_key(ctx.client, ctx.author.id), 7055, "SkinShop"),
+                ((0, None), 6543, "Never"),
+                ((0, None), 5432, "Going"),
+                ((0, None), 4321, "To"),
+                ((0, None), 3210, "Give"),
+                ((0, None), 2109, "You"),
+                ((0, None), 1098, "Up"),
+            ]
+        }
+
 
 class BreakTimerCard(_TimerCard):
     route = 'break_timer_card'
@@ -409,3 +428,22 @@ class BreakTimerCard(_TimerCard):
 
     skin = BreakTimerSkin
     display_name = "Break Timer"
+
+    @classmethod
+    async def sample_args(cls, ctx, **kwargs):
+        from ..utils import get_avatar_key
+
+        return {
+            'name': 'Pomodoro Timer',
+            'remaining': 1658,
+            'duration': 3000,
+            'users': [
+                (get_avatar_key(ctx.client, ctx.author.id), 7055, "SkinShop"),
+                ((0, None), 6543, "Never"),
+                ((0, None), 5432, "Going"),
+                ((0, None), 4321, "To"),
+                ((0, None), 3210, "Let"),
+                ((0, None), 2109, "You"),
+                ((0, None), 1098, "Down"),
+            ]
+        }

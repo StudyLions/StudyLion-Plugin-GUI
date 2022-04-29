@@ -590,13 +590,19 @@ class ProfileCard(Card):
     async def sample_args(cls, ctx, **kwargs):
         return {
             'name': ctx.author.name,
-            'discrim': ctx.author.discriminator,
+            'discrim': '#' + ctx.author.discriminator,
             'avatar': get_avatar_key(ctx.client, ctx.author.id),
             'coins': 58596,
             'time': 3750 * 3600,
             'answers': 10,
             'attendance': 0.9,
-            'badges': ('MEDICINE', 'NEUROSCIENCE', 'BIO', 'MATHS', 'BACHELOR\'S DEGREE', 'VEGAN SOMETIMES', 'EUROPE'),
+            'badges': (
+                'STUDYING: MEDICINE',
+                'HOBBY: MATHS',
+                'CAREER: STUDENT',
+                'FROM: EUROPE',
+                'LOVES CATS <3'
+            ),
             'achievements': (0, 2, 5, 7),
             'current_rank': ('VAMPIRE', 3000, 4000),
             'next_rank': ('WIZARD', 4000, 8000),

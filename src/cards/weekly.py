@@ -1,7 +1,7 @@
 import os
 import math
 from PIL import Image, ImageDraw
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 
 from ..utils import resolve_asset_path
 from ..base import Card, Layout, fielded, Skin
@@ -618,3 +618,31 @@ class WeeklyStatsCard(Card):
     skin = WeeklyStatsSkin
 
     display_name = "Weekly Stats"
+
+    @classmethod
+    async def sample_args(cls, ctx, **kwargs):
+        import random
+        sessions = []
+        day_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        day_start -= timedelta(hours=24) * 14
+        for day in range(0, 14):
+            day_start += timedelta(hours=24)
+
+            # start of day
+            pointer = int(abs(random.normalvariate(6 * 60, 1 * 60)))
+            while pointer < 20 * 60:
+                session_duration = int(abs(random.normalvariate(4 * 60, 1 * 60)))
+                sessions.append((
+                    day_start + timedelta(minutes=pointer),
+                    day_start + timedelta(minutes=(pointer + session_duration)),
+                )
+                )
+                pointer += session_duration
+                pointer += int(abs(random.normalvariate(2.5 * 60, 1 * 60)))
+
+        return {
+            'name': ctx.author.name,
+            'discrim': '#' + ctx.author.discriminator,
+            'sessions': sessions,
+            'date': datetime.now(timezone.utc).replace(hour=0, minute=0, second=0)
+        }

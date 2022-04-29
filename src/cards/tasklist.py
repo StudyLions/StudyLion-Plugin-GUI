@@ -437,3 +437,40 @@ class TasklistCard(Card):
             with Image.open(image_data).convert('RGBA') as avatar_image:
                 kwargs['avatar'] = avatar_image
                 return super()._execute(*args, **kwargs)
+
+    @classmethod
+    async def generate_sample(cls, ctx=None, **kwargs):
+        from ..utils import image_as_file
+
+        sample_kwargs = await cls.sample_args(ctx)
+        cards = await cls.request(**{**sample_kwargs, **kwargs})
+        return image_as_file(cards[0], "sample.png")
+
+    @classmethod
+    async def sample_args(cls, ctx, **kwargs):
+        import datetime
+        from ..utils import get_avatar_key
+
+        return {
+            'name': ctx.author.name,
+            'discrim': '#' + ctx.author.discriminator,
+            'tasks': [
+                (0, 'Run 50km', True),
+                (1, 'Read 5 books', False),
+                (2, 'Renovate bedroom', True),
+                (3, 'Learn a new language', False),
+                (4, 'Upload a vlog', False),
+                (5, 'Bibendum arcu vitae elementum curabitur vitae nunc sed velit', False),
+                (6, 'Dictum fusce ut placerat orci', True),
+                (7, 'Pharetra vel turpis nunc eget lorem dolor', True)
+            ],
+            'date': datetime.datetime.now().replace(hour=0, minute=0, second=0),
+            'avatar': get_avatar_key(ctx.client, ctx.author.id),
+            'badges': (
+                'STUDYING: MEDICINE',
+                'HOBBY: MATHS',
+                'CAREER: STUDENT',
+                'FROM: EUROPE',
+                'LOVES CATS <3'
+            ),
+        }
