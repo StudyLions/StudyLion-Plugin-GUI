@@ -2,6 +2,7 @@
   "fallback": "original",
   "skin_map": {
     "original": "base",
-    "testing": "testing"
+    "testing": "testing",
+    "obsidian": "obsidian"
   }
 }
