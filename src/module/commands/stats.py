@@ -147,20 +147,6 @@ async def get_profile_card_for(ctx: Context, target):
     coins = lion.coins
     season_time = lion.time
 
-    # Accountability stats
-    accountability = tables.accountability_member_info.select_where(
-        userid=target.id,
-        start_at=LEQ(utc_now()),
-        select_columns=("*", "(duration > 0 OR last_joined_at IS NOT NULL) AS attended"),
-        _extra="ORDER BY start_at DESC"
-    )
-    if len(accountability):
-        acc_attended = sum(row['attended'] for row in accountability)
-        acc_total = len(accountability)
-        acc_rate = (acc_attended) / acc_total
-    else:
-        acc_rate = None
-
     # Study League
     guild_badges = tables.study_badges.fetch_rows_where(guildid=ctx.guild.id)
     if lion.data.last_study_badgeid:
@@ -206,9 +192,9 @@ async def get_profile_card_for(ctx: Context, target):
         coins,
         season_time,
         avatar=avatar,
-        answers=None,
+        gems=0,
+        gifts=0,
         achievements=[i for i, ach in enumerate(achievements) if ach.level_id > 0],
-        attendance=acc_rate,
         current_rank=current_rank,
         next_rank=next_rank,
         badges=lion.profile_tags,

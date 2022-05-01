@@ -1,7 +1,7 @@
 import time
 import logging
 
-from PIL import Image
+from PIL import Image, ImageColor
 from ..utils import inter_font, resolve_asset_path
 from .AppSkin import AppSkin
 
@@ -54,13 +54,16 @@ class AssetField(Field):
         super().__init__(**kwargs)
 
         self.convert = convert or self._default_convert
-        self.path = resolve_asset_path(PATH, self.data)
+        self.path = resolve_asset_path(PATH, self.data) if self.data else None
 
     def load(self):
-        image = Image.open(self.path)
-        if self.convert:
-            image = image.convert(self.convert)
-        self.value = image
+        if self.path:
+            image = Image.open(self.path)
+            if self.convert:
+                image = image.convert(self.convert)
+            self.value = image
+        else:
+            self.value = None
         return self
 
     def close(self):
@@ -85,6 +88,53 @@ class AssetPathField(Field):
 
     def load(self):
         return self
+
+
+class BlobField(Field):
+    """
+    Composite field that uses an existing AssetField as a mask for a ColourField.
+    Also allows overiding with an explicit path, in which case it will be treated as an AssetField.
+    """
+    __slots__ = (
+        'skin',
+        'asset',
+        'mask_field',
+        'colour_field',
+        'colour_override_field'
+    )
+
+    def __init__(self, skin=None, mask_field=None, colour_field=None, colour_override_field=None, **kwargs):
+        self.skin = skin
+        self.mask_field = mask_field
+        self.colour_field = colour_field
+        self.colour_override_field = colour_override_field
+        super().__init__(**kwargs)
+
+        if isinstance(self.data, str):
+            self.asset = AssetField(**kwargs)
+        else:
+            self.asset = None
+
+    def load(self):
+        mask = self.skin.fields[self.mask_field].value
+        colour = self.skin.fields[self.colour_field].value
+        if self.colour_override_field:
+            colour_override = self.skin.fields[self.colour_override_field].value
+        else:
+            colour_override = None
+
+        if self.asset is not None and not colour_override:
+            self.value = self.asset.load().value
+        else:
+            colour = colour_override or colour
+            image = Image.new('RGBA', (mask.width, mask.height))
+            image.paste(ImageColor.getrgb(colour), mask=mask)
+            self.value = image
+        return self
+
+    def close(self):
+        if self.value is not None:
+            self.value.close()
 
 
 class RawField(Field):
@@ -148,7 +198,7 @@ class FontField(Field):
 
 class ColourField(RawField):
     __slots__ = ()
-    _default = "#000000"
+    _default = None
 
 
 class PointField(RawField):

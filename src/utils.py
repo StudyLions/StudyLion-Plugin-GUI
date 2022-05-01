@@ -1,6 +1,7 @@
 import io
 import os
 import discord
+import logging
 
 from PIL import ImageFont
 
@@ -30,6 +31,9 @@ def resolve_asset_path(PATH, asset_path):
         try_path = os.path.join(path, asset_path)
         if os.path.exists(try_path):
             return try_path
+    logging.error(
+        f"Could not resolve asset path '{asset_path}' in PATH: '{PATH}'"
+    )
 
     return None
 

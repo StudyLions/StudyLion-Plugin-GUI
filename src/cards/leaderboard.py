@@ -5,8 +5,8 @@ from PIL import Image, ImageDraw
 from ..base import Card, Layout, fielded, Skin, FieldDesc
 from ..base.Avatars import avatar_manager
 from ..base.Skin import (
-    AssetField, AssetPathField, StringField, NumberField,
-    FontField, ColourField, PointField, ComputedField
+    AssetField, RGBAAssetField, AssetPathField, BlobField, StringField, NumberField,
+    FontField, ColourField, ComputedField
 )
 
 
@@ -70,21 +70,22 @@ class LeaderboardSkin(Skin):
     header_gap: NumberField = 20
 
     # First page constants
-    first_bg_path: AssetPathField = "leaderboard/first_page/bg.png"
-    first_header_bg_path: AssetPathField = "leaderboard/first_page/header.png"
-    first_header_bg_position: PointField = (0, 0)
+    first_bg_path: AssetPathField = "leaderboard/first_page_background.png"
     header_bg_gap: NumberField = 20
+    first_header_height: NumberField = 694
 
-    first_avatar_mask: AssetField = "leaderboard/first_page/avatar_mask.png"
-    first_avatar_bg: AssetField = 'leaderboard/first_page/avatar_bg.png'
-    first_level_scale: NumberField = FieldDesc(NumberField, 0.8, integer=False, scale=False)
-    crown_1: AssetField = "leaderboard/first_page/crown_1.png"
-    crown_2: AssetField = "leaderboard/first_page/crown_2.png"
-    crown_3: AssetField = "leaderboard/first_page/crown_3.png"
-    crown_gap: NumberField = 10
+    first_avatar_mask: RGBAAssetField = "leaderboard/medal_avatar_mask.png"
+
+    first_avatar_bg: RGBAAssetField = "leaderboard/first_avatar_background.png"
+    second_avatar_bg: RGBAAssetField = "leaderboard/second_avatar_background.png"
+    third_avatar_bg: RGBAAssetField = "leaderboard/third_avatar_background.png"
+
+    first_avatar_gap: NumberField = 20
 
     first_top_gap: NumberField = 20
 
+    top_position_font: FontField = ('Bold', 30)
+    top_position_colour: ColourField = '#FFFFFF'
     top_name_font: FontField = ('Bold', 30)
     top_name_colour: ColourField = '#DDB21D'
     top_hours_font: FontField = ('Medium', 30)
@@ -92,20 +93,39 @@ class LeaderboardSkin(Skin):
     top_text_sep: NumberField = 5
 
     # Other page constants
-    other_bg_path: AssetPathField = "leaderboard/other_page/bg.png"
-    other_header_bg_path: AssetPathField = "leaderboard/other_page/header.png"
+    other_bg_path: AssetPathField = "leaderboard/other_page_background.png"
+    other_header_height: NumberField = 276
     other_header_gap: NumberField = 20
 
     # Entry constants
-    entry_font: FontField = ("SemiBold", 45)
-    entry_colour: ColourField = '#FFFFFF'
+    entry_position_font: FontField = ("SemiBold", 45)
+    entry_position_colour: ColourField = '#FFFFFF'
+    entry_name_font: FontField = ("SemiBold", 45)
+    entry_name_colour: ColourField = '#FFFFFF'
+    entry_hours_font: FontField = ("SemiBold", 45)
+    entry_hours_colour: ColourField = '#FFFFFF'
     entry_position_at: NumberField = 200
     entry_name_at: NumberField = 300
     entry_time_at: NumberField = -150
 
-    entry_bg: AssetField = "leaderboard/entry_bg.png"
-    entry_highlight_bg: AssetField = "leaderboard/entry_highlight_bg.png"
-    entry_mask: AssetField = FieldDesc(AssetField, "leaderboard/entry_avatar_mask.png", convert=None)
+    entry_mask: AssetField = "leaderboard/entry_avatar_mask.png"
+
+    entry_bg_mask: AssetField = "leaderboard/entry_bg_mask.png"
+    entry_bg_colour: ColourField = "#162D3C"
+    entry_bg_highlight_colour: ColourField = "#0D4865"
+
+    entry_bg: BlobField = FieldDesc(
+        BlobField,
+        mask_field='entry_bg_mask',
+        colour_field='entry_bg_colour',
+        colour_override_field=None
+    )
+    entry_highlight_bg: BlobField = FieldDesc(
+        BlobField,
+        mask_field='entry_bg_mask',
+        colour_field='entry_bg_highlight_colour',
+        colour_override_field=None
+    )
 
     entry_gap: NumberField = 13
 
@@ -133,13 +153,6 @@ class LeaderboardPage(Layout):
         image = Image.open(self.skin.first_bg_path)
         draw = ImageDraw.Draw(image)
 
-        # Draw header background
-        header_background = Image.open(self.skin.first_header_bg_path)
-        image.alpha_composite(
-            header_background,
-            self.skin.first_header_bg_position
-        )
-
         xpos, ypos = 0, 0
 
         # Draw the header text
@@ -166,8 +179,8 @@ class LeaderboardPage(Layout):
         draw.text(
             (text_x, text_y),
             '1ST',
-            font=self.skin.top_name_font,
-            fill=self.skin.top_name_colour,
+            font=self.skin.top_position_font,
+            fill=self.skin.top_position_colour,
             anchor='mt'
         )
         text_y += self.skin.top_name_font.getsize('1ST')[1] + self.skin.top_text_sep
@@ -203,8 +216,8 @@ class LeaderboardPage(Layout):
             draw.text(
                 (text_x, text_y),
                 '2ND',
-                font=self.skin.top_name_font,
-                fill=self.skin.top_name_colour,
+                font=self.skin.top_position_font,
+                fill=self.skin.top_position_colour,
                 anchor='mt'
             )
             text_y += self.skin.top_name_font.getsize('2ND')[1] + self.skin.top_text_sep
@@ -240,8 +253,8 @@ class LeaderboardPage(Layout):
             draw.text(
                 (text_x, text_y),
                 '3RD',
-                font=self.skin.top_name_font,
-                fill=self.skin.top_name_colour,
+                font=self.skin.top_position_font,
+                fill=self.skin.top_position_colour,
                 anchor='mt'
             )
             text_y += self.skin.top_name_font.getsize('3ND')[1] + self.skin.top_text_sep
@@ -262,8 +275,8 @@ class LeaderboardPage(Layout):
             )
 
         # Draw the entries
-        xpos = (image.width - self.skin.entry_bg.width) // 2
-        ypos = header_background.height + self.skin.header_bg_gap
+        xpos = (image.width - self.skin.entry_bg_mask.width) // 2
+        ypos = self.skin.first_header_height + self.skin.header_bg_gap
 
         for entry in self.entries[3:]:
             entry_image = self._draw_entry(
@@ -274,56 +287,42 @@ class LeaderboardPage(Layout):
                 entry_image,
                 (xpos, ypos)
             )
-            ypos += self.skin.entry_bg.height + self.skin.entry_gap
+            ypos += self.skin.entry_bg_mask.height + self.skin.entry_gap
 
         return image
 
     def _draw_other_page(self) -> Image:
-        # Collect backgrounds
-        background = Image.open(self.skin.other_bg_path).convert('RGBA')
-        header_bg = Image.open(self.skin.other_header_bg_path).convert('RGBA')
+        # Collect background
+        image = Image.open(self.skin.other_bg_path).convert('RGBA')
 
         # Draw header onto background
         header = self._draw_header_text()
-        header_bg.alpha_composite(
+        image.alpha_composite(
             header,
             (
-                (header_bg.width - header.width) // 2,
-                (header_bg.height - header.height) // 2
+                (image.width - header.width) // 2,
+                (self.skin.other_header_height - header.height) // 2
             )
         )
 
         # Draw the entries
-        xpos = (background.width - self.skin.entry_bg.width) // 2
-        ypos = (background.height - 10 * self.skin.entry_bg.height - 9 * self.skin.entry_gap) // 2
+        xpos = (image.width - self.skin.entry_bg.width) // 2
+        ypos = (
+            image.height - 10 * self.skin.entry_bg.height - 9 * self.skin.entry_gap
+            + self.skin.other_header_height - self.skin.other_header_gap
+        ) // 2
 
         for entry in self.entries:
             entry_image = self._draw_entry(
                 entry,
                 highlight=self.highlight and (entry.position == self.highlight)
             )
-            background.alpha_composite(
+            image.alpha_composite(
                 entry_image,
                 (xpos, ypos)
             )
             ypos += self.skin.entry_bg.height + self.skin.entry_gap
 
-        # Combine images
-        image = Image.new(
-            'RGBA',
-            (
-                background.width,
-                header_bg.height + self.skin.other_header_gap + background.height
-            )
-        )
-        image.alpha_composite(
-            header_bg,
-            (0, 0)
-        )
-        image.alpha_composite(
-            background,
-            (0, header_bg.height + self.skin.other_header_gap)
-        )
         return image
 
     def _draw_entry(self, entry, highlight=False) -> Image:
@@ -344,8 +343,8 @@ class LeaderboardPage(Layout):
         draw.text(
             (self.skin.entry_position_at, ypos),
             str(entry.position),
-            fill=self.skin.entry_colour,
-            font=self.skin.entry_font,
+            fill=self.skin.entry_position_colour,
+            font=self.skin.entry_position_font,
             anchor='mm'
         )
 
@@ -353,8 +352,8 @@ class LeaderboardPage(Layout):
         draw.text(
             (self.skin.entry_name_at, ypos),
             entry.name,
-            fill=self.skin.entry_colour,
-            font=self.skin.entry_font,
+            fill=self.skin.entry_name_colour,
+            font=self.skin.entry_name_font,
             anchor='lm'
         )
 
@@ -366,8 +365,8 @@ class LeaderboardPage(Layout):
         draw.text(
             (image.width + self.skin.entry_time_at, ypos),
             time_str,
-            fill=self.skin.entry_colour,
-            font=self.skin.entry_font,
+            fill=self.skin.entry_hours_colour,
+            font=self.skin.entry_hours_font,
             anchor='mm'
         )
 
@@ -375,49 +374,27 @@ class LeaderboardPage(Layout):
 
     def _draw_first(self, entry, level) -> Image:
         if level == 1:
-            crown = self.skin.crown_1
+            image = self.skin.first_avatar_bg
         elif level == 2:
-            crown = self.skin.crown_2
+            image = self.skin.second_avatar_bg
         elif level == 3:
-            crown = self.skin.crown_3
-
-        image = Image.new(
-            'RGBA',
-            (self.skin.first_avatar_bg.width,
-             crown.height + self.skin.crown_gap
-             + self.skin.first_avatar_mask.height
-             + (self.skin.first_avatar_bg.height - self.skin.first_avatar_mask.height) // 2)
-        )
+            image = self.skin.third_avatar_bg
 
         # Retrieve and mask avatar
         avatar = entry.image
-        avatar.paste((0, 0, 0, 0), mask=self.skin.first_avatar_mask.convert('RGBA'))
+        avatar.paste((0, 0, 0, 0), mask=self.skin.first_avatar_mask)
+
+        # Resize for background with gap
+        dest_width = image.width - 2 * self.skin.first_avatar_gap
+        avatar.thumbnail((dest_width, dest_width))
 
         # Paste on the background
-        image.paste(
-            self.skin.first_avatar_bg,
-            (0, image.height - self.skin.first_avatar_bg.height)
-        )
-
-        # Paste on the avatar
         image.alpha_composite(
-            avatar,
+            avatar.convert('RGBA'),
             (
-                (self.skin.first_avatar_bg.width - avatar.width) // 2,
-                image.height - self.skin.first_avatar_bg.height +
-                (self.skin.first_avatar_bg.height - avatar.height) // 2
-            )
+                (image.width - avatar.width) // 2,
+                image.height - self.skin.first_avatar_gap - avatar.height)
         )
-
-        image.alpha_composite(
-            crown,
-            ((image.width - crown.width) // 2, 0)
-        )
-
-        # Downscale depending on ranking
-        if level in (2, 3):
-            new_height = int(image.height * self.skin.first_level_scale)
-            image.thumbnail((new_height, new_height))
 
         return image
 
@@ -474,30 +451,6 @@ class LeaderboardPage(Layout):
         return image
 
 
-# if __name__ == '__main__':
-#     avatar_url = "https://cdn.discordapp.com/avatars/757652191656804413/e49459df05c4ed7995defd7c6ce79a97.png"
-#     entries = [
-#         LeaderboardEntry(1, 100*3600, name="FIRST PERSON"),
-#         LeaderboardEntry(2, 50*3600, name="SECOND PERSON"),
-#         LeaderboardEntry(3, 25*3600, name="THIRD PERSON"),
-#         LeaderboardEntry(4, 13*3600, name="FOURTH PERSON"),
-#         LeaderboardEntry(5, 10*3600 + 20 * 60, name="FIFTH PERSON"),
-#         LeaderboardEntry(6, 10*3600 + 20 * 60, name="SIXTH PERSON"),
-#         LeaderboardEntry(7, 10*3600 + 20 * 60, name="SEVENTH PERSON"),
-#         LeaderboardEntry(8, 10*3600 + 20 * 60, name="EIGHT PERSON"),
-#         LeaderboardEntry(9, 10*3600 + 20 * 60, name="NINTH PERSON"),
-#         LeaderboardEntry(10, 10*3600 + 20 * 60, name="TENTH PERSON"),
-#     ]
-#     for entry in entries[:3]:
-#         entry.image = Image.open('samples/example_avatar_512.png').convert('RGBA')
-#     for entry in entries[3:]:
-#         entry.image = Image.open('samples/example_avatar_512.png').convert('RGBA')
-
-#     page = LeaderboardPage("The Study Lions", entries, highlight=15)
-#     image = page.draw()
-#     image.save("lb_page.png")
-
-
 class LeaderboardCard(Card):
     route = 'leaderboard_card'
     card_id = 'leaderboard'
@@ -527,9 +480,13 @@ class LeaderboardCard(Card):
         from ..utils import get_avatar_key
 
         return {
-            'server_name': ctx.guild.name if ctx.guild else f"{ctx.author.name}'s DMs",
+            'server_name': (ctx.guild.name if ctx.guild else f"{ctx.author.name}'s DMs") if ctx else "No Server",
             'entries': [
-                (ctx.author.id, 1, 1474481, ctx.author.name, get_avatar_key(ctx.client, ctx.author.id)),
+                (
+                    (ctx.author.id, 1, 1474481, ctx.author.name, get_avatar_key(ctx.client, ctx.author.id))
+                    if ctx else
+                    (0, 1, 1474481, "John Doe", (0, None))
+                ),
                 (1, 2, 1445975, 'Abioye', (0, None)),
                 (2, 3, 1127296, 'Lacey', (0, None)),
                 (3, 4, 1112495, 'Chesed', (0, None)),
@@ -540,5 +497,5 @@ class LeaderboardCard(Card):
                 (8, 9, 417487, 'Keone', (0, None)),
                 (9, 10, 257274, 'Desta', (0, None))
             ],
-            'highlight': 1
+            'highlight': 4
         }

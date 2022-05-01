@@ -1,16 +1,18 @@
 import math
 import datetime
 from io import BytesIO
-from PIL import Image, ImageDraw, ImageOps
+from PIL import Image, ImageDraw, ImageOps, ImageColor
 
 from ..base import Card, Layout, fielded, Skin, FieldDesc
 from ..base.Avatars import avatar_manager
 from ..base.Skin import (
-    AssetField, AssetPathField, StringField, NumberField,
+    AssetField, RGBAAssetField, BlobField, AssetPathField, StringField, NumberField,
     FontField, ColourField, PointField, ComputedField
 )
 
 from ..utils import get_avatar_key
+
+from .mixins import MiniProfileLayout
 
 
 @fielded
@@ -21,7 +23,7 @@ class _GoalSkin(Skin):
 
     background: AssetField = "goals/background.png"
 
-    help_frame: AssetField = "weekly/help_frame.png"
+    help_frame: AssetField = None
 
     # Title section
     title_pre_gap: NumberField = 40
@@ -34,33 +36,46 @@ class _GoalSkin(Skin):
     title_gap: NumberField = 50
 
     # Profile section
-    profile_indent: NumberField = 125
-    profile_size: ComputedField = lambda skin: (
-        skin.background.width - 2 * skin.profile_indent,
+    mini_profile_indent: NumberField = 125
+    mini_profile_size: ComputedField = lambda skin: (
+        skin.background.width - 2 * skin.mini_profile_indent,
         int(skin._env['scale'] * 200)
     )
+    mini_profile_avatar_mask: AssetField = FieldDesc(AssetField, 'mini-profile/avatar_mask.png', convert=None)
+    mini_profile_avatar_frame: AssetField = FieldDesc(AssetField, 'mini-profile/avatar_frame.png', convert='RGBA')
+    mini_profile_avatar_sep: NumberField = 50
 
-    avatar_mask: AssetField = FieldDesc(AssetField, 'tasklist/first/avatar_mask.png', convert=None)
-    avatar_frame: AssetField = FieldDesc(AssetField, 'tasklist/first/avatar_frame.png', convert=None)
-    avatar_sep: NumberField = 50
+    mini_profile_name_font: FontField = ('BoldItalic', 55)
+    mini_profile_name_colour: ColourField = '#DDB21D'
+    mini_profile_discrim_font: FontField = mini_profile_name_font
+    mini_profile_discrim_colour: ColourField = '#BABABA'
+    mini_profile_name_gap: NumberField = 20
 
-    name_font: FontField = ('BoldItalic', 55)
-    name_colour: ColourField = '#DDB21D'
-    discrim_font: FontField = name_font
-    discrim_colour: ColourField = '#BABABA'
-    name_gap: NumberField = 20
-
-    badge_end: AssetField = "tasklist/first/badge_end.png"
-    badge_font: FontField = ('Black', 30)
-    badge_colour: ColourField = '#FFFFFF'
-    badge_text_colour: ColourField = '#051822'
-    badge_gap: NumberField = 20
-    badge_min_sep: NumberField = 10
+    mini_profile_badge_end: AssetField = "mini-profile/badge_end.png"
+    mini_profile_badge_font: FontField = ('Black', 30)
+    mini_profile_badge_colour: ColourField = '#FFFFFF'
+    mini_profile_badge_text_colour: ColourField = '#051822'
+    mini_profile_badge_gap: NumberField = 20
+    mini_profile_badge_min_sep: NumberField = 10
 
     # Progress bars
-    progress_bg: AssetField = 'goals/progress_bg.png'
-    progress_mask: ComputedField = lambda skin: ImageOps.invert(skin.progress_bg.split()[-1].convert('L'))
-    progress_end: AssetField = 'goals/progress_end.png'
+    progress_mask: RGBAAssetField = 'goals/progressbar_mask.png'
+    progress_bg_colour: ColourField = '#273341'
+    progress_bg: BlobField = FieldDesc(
+        BlobField,
+        mask_field='progress_mask',
+        colour_field='progress_bg_colour',
+        colour_override_field=None
+    )
+    progress_end: RGBAAssetField = 'goals/progressbar_end_mask.png'
+    progress_colour: ColourField = '#6CB7D0'
+    progress_colour_override: ColourField = None
+    progress_full: BlobField = FieldDesc(
+        BlobField,
+        mask_field='progress_mask',
+        colour_field='progress_colour',
+        colour_override_field='progress_colour_override'
+    )
 
     line_gap: NumberField = 5
     progress_text_at: ComputedField = lambda skin: 7 * (skin.progress_bg.height // 10)
@@ -121,7 +136,7 @@ class _GoalSkin(Skin):
     task_underline_gap: NumberField = 10
     task_underline_width: NumberField = 5
 
-    task_done_number_bg: AssetField = "goals/done.png"
+    task_done_number_bg: AssetField = "goals/task_done.png"
     task_done_number_font: FontField = ('Regular', 28)
     task_done_number_colour: ColourField = '#292828'
 
@@ -130,7 +145,7 @@ class _GoalSkin(Skin):
 
     task_done_line_width: NumberField = FieldDesc(NumberField, 7, scaled=False)
 
-    task_undone_number_bg: AssetField = "goals/undone.png"
+    task_undone_number_bg: AssetField = "goals/task_undone.png"
     task_undone_number_font: FontField = ('Regular', 28)
     task_undone_number_colour: ColourField = '#FFFFFF'
 
@@ -142,10 +157,10 @@ class _GoalSkin(Skin):
     task_inter_gap: NumberField = 25
 
     # Date text
-    date_pre_gap: NumberField = 25
-    date_font: FontField = ('Bold', 28)
-    date_colour: ColourField = '#6f6e6f'
-    date_gap: NumberField = 50
+    footer_pre_gap: NumberField = 25
+    footer_font: FontField = ('Bold', 28)
+    footer_colour: ColourField = '#6f6e6f'
+    footer_gap: NumberField = 50
 
 
 @fielded
@@ -164,7 +179,7 @@ class MonthlyGoalSkin(_GoalSkin):
     help_frame: AssetField = "monthly/help_frame.png"
 
 
-class GoalPage(Layout):
+class GoalPage(Layout, MiniProfileLayout):
     def __init__(self, skin,
                  name, discrim, avatar, badges,
                  tasks_done, studied_hours, attendance,
@@ -215,7 +230,7 @@ class GoalPage(Layout):
         ypos += self.skin.title_underline_width + self.skin.title_gap
 
         # Draw the profile
-        xpos = self.skin.profile_indent
+        xpos = self.skin.mini_profile_indent
         profile = self._draw_profile()
         image.alpha_composite(
             profile,
@@ -226,17 +241,17 @@ class GoalPage(Layout):
         ypos = image.height
 
         # Draw the date text
-        ypos -= self.skin.date_gap
+        ypos -= self.skin.footer_gap
         date_text = self.data_date.strftime("As of %d %b • {} {}".format(self.data_name, self.data_discrim))
-        size = self.skin.date_font.getsize(date_text)
+        size = self.skin.footer_font.getsize(date_text)
         ypos -= size[1]
         draw.text(
             ((image.width - size[0]) // 2, ypos),
             date_text,
-            font=self.skin.date_font,
-            fill=self.skin.date_colour
+            font=self.skin.footer_font,
+            fill=self.skin.footer_colour
         )
-        ypos -= self.skin.date_pre_gap
+        ypos -= self.skin.footer_pre_gap
 
         if self.data_goals or self.data_tasks_goal or self.data_studied_goal:
             # Draw the tasks
@@ -490,99 +505,6 @@ class GoalPage(Layout):
         )
         return progress_image
 
-    def _draw_profile(self) -> Image:
-        image = Image.new('RGBA', self.skin.profile_size)
-        draw = ImageDraw.Draw(image)
-        xpos, ypos = 0, 0
-
-        # Draw avatar
-        avatar = self.data_avatar
-        avatar.paste((0, 0, 0, 0), mask=self.skin.avatar_mask)
-        avatar_image = Image.new('RGBA', (264, 264))
-        avatar_image.paste(avatar, (3, 4))
-        avatar_image.alpha_composite(self.skin.avatar_frame)
-        avatar_image = avatar_image.resize((self.skin.profile_size[1], self.skin.profile_size[1]))
-        image.alpha_composite(avatar_image, (0, 0))
-
-        xpos += avatar_image.width + self.skin.avatar_sep
-
-        # Draw name
-        name_text = self.data_name
-        name_length = self.skin.name_font.getlength(name_text + ' ')
-        name_height = self.skin.name_font.getsize(name_text)[1]
-        draw.text(
-            (xpos, ypos),
-            name_text,
-            fill=self.skin.name_colour,
-            font=self.skin.name_font
-        )
-        draw.text(
-            (xpos + name_length, ypos),
-            self.data_discrim,
-            fill=self.skin.discrim_colour,
-            font=self.skin.discrim_font
-        )
-        ypos += name_height + self.skin.name_gap
-
-        # Draw badges
-        _x = 0
-        max_x = self.skin.profile_size[0] - xpos
-
-        badges = [self._draw_badge(text) for text in self.data_badges]
-        for badge in badges:
-            if badge.width + _x > max_x:
-                _x = 0
-                ypos += badge.height + self.skin.badge_gap
-            image.paste(
-                badge,
-                (xpos + _x, ypos)
-            )
-            _x += badge.width + self.skin.badge_min_sep
-        return image
-
-    def _draw_badge(self, text) -> Image:
-        """
-        Draw a single profile badge, with the given text.
-        """
-        text_length = self.skin.badge_font.getsize(text)[0]
-
-        height = self.skin.badge_end.height
-        width = text_length + self.skin.badge_end.width
-
-        badge = Image.new('RGBA', (width, height), color=(0, 0, 0, 0))
-
-        # Add blobs to ends
-        badge.paste(
-            self.skin.badge_end,
-            (0, 0)
-        )
-        badge.paste(
-            self.skin.badge_end,
-            (width - self.skin.badge_end.width, 0)
-        )
-
-        # Add rectangle to middle
-        draw = ImageDraw.Draw(badge)
-        draw.rectangle(
-            (
-                (self.skin.badge_end.width // 2, 0),
-                (width - self.skin.badge_end.width // 2, height),
-            ),
-            fill=self.skin.badge_colour,
-            width=0
-        )
-
-        # Write badge text
-        draw.text(
-            (self.skin.badge_end.width // 2, height // 2),
-            text,
-            font=self.skin.badge_font,
-            fill=self.skin.badge_text_colour,
-            anchor='lm'
-        )
-
-        return badge
-
     def _draw_tasks_into(self, tasks, image) -> Image:
         """
         Draw as many tasks as possible into the given image background.
@@ -656,20 +578,20 @@ class GoalPage(Layout):
     def _draw_progress_bar(self, amount):
         amount = min(amount, 1)
         amount = max(amount, 0)
-        bg = self.skin.progress_bg
+
         end = self.skin.progress_end
         mask = self.skin.progress_mask
 
         center = (
-            bg.width // 2 + 1,
-            bg.height // 2
+            mask.width // 2 + 1,
+            mask.height // 2
         )
         radius = 2 * 158
         theta = amount * math.pi * 2 - math.pi / 2
         x = int(center[0] + radius * math.cos(theta))
         y = int(center[1] + radius * math.sin(theta))
 
-        canvas = Image.new('RGBA', size=(bg.width, bg.height))
+        canvas = Image.new('RGBA', size=(mask.width, mask.height))
         draw = ImageDraw.Draw(canvas)
 
         if amount >= 0.01:
@@ -688,7 +610,7 @@ class GoalPage(Layout):
                 )
             )
 
-            sidelength = bg.width // 2
+            sidelength = mask.width // 2
             line_ends = (
                 int(center[0] + sidelength * math.cos(theta)),
                 int(center[1] + sidelength * math.sin(theta))
@@ -697,48 +619,51 @@ class GoalPage(Layout):
                 path = [
                     center,
                     (center[0], center[1] - sidelength),
-                    (bg.width, 0),
+                    (mask.width, 0),
                     line_ends
                 ]
             elif amount <= 0.5:
                 path = [
                     center,
                     (center[0], center[1] - sidelength),
-                    (bg.width, 0),
-                    (bg.width, bg.height),
+                    (mask.width, 0),
+                    (mask.width, mask.height),
                     line_ends
                 ]
             elif amount <= 0.75:
                 path = [
                     center,
                     (center[0], center[1] - sidelength),
-                    (bg.width, 0),
-                    (bg.width, bg.height),
-                    (0, bg.height),
+                    (mask.width, 0),
+                    (mask.width, mask.height),
+                    (0, mask.height),
                     line_ends
                 ]
             else:
                 path = [
                     center,
                     (center[0], center[1] - sidelength),
-                    (bg.width, 0),
-                    (bg.width, bg.height),
-                    (0, bg.height),
+                    (mask.width, 0),
+                    (mask.width, mask.height),
+                    (0, mask.height),
                     (0, 0),
                     line_ends
                 ]
 
             draw.polygon(
                 path,
-                fill='#6CB7D0'
+                fill='#FFFFFF'
+            )
+            # canvas.paste((0, 0, 0, 0), mask=mask)
+
+            image = Image.composite(
+                self.skin.progress_full,
+                self.skin.progress_bg.copy(),
+                canvas
             )
 
-            canvas.paste((0, 0, 0, 0), mask=mask)
-
-        image = Image.new('RGBA', size=(bg.width, bg.height))
-        image.alpha_composite(bg)
-        image.alpha_composite(canvas)
-
+        else:
+            image = self.skin.progress_bg.copy()
         return image
 
 
@@ -769,9 +694,9 @@ class WeeklyGoalCard(_GoalCard):
     @classmethod
     async def sample_args(cls, ctx, **kwargs):
         return {
-            'name': ctx.author.name,
-            'discrim': '#' + ctx.author.discriminator,
-            'avatar': get_avatar_key(ctx.client, ctx.author.id),
+            'name': ctx.author.name if ctx else 'John Doe',
+            'discrim': ('#' + ctx.author.discriminator) if ctx else '#0000',
+            'avatar': get_avatar_key(ctx.client, ctx.author.id) if ctx else (0, None),
             'badges': (
                 'STUDYING: MEDICINE',
                 'HOBBY: MATHS',
@@ -803,9 +728,9 @@ class MonthlyGoalCard(_GoalCard):
     @classmethod
     async def sample_args(cls, ctx, **kwargs):
         return {
-            'name': ctx.author.name,
-            'discrim': '#' + ctx.author.discriminator,
-            'avatar': get_avatar_key(ctx.client, ctx.author.id),
+            'name': ctx.author.name if ctx else 'John Doe',
+            'discrim': ('#' + ctx.author.discriminator) if ctx else '#0000',
+            'avatar': get_avatar_key(ctx.client, ctx.author.id) if ctx else (0, None),
             'badges': (
                 'STUDYING: MEDICINE',
                 'HOBBY: MATHS',

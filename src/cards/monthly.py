@@ -7,7 +7,8 @@ import datetime
 
 from ..base import Card, Layout, fielded, Skin
 from ..base.Skin import (
-    AssetField, StringField, NumberField, RawField,
+    FieldDesc,
+    AssetField, RGBAAssetField, BlobField, StringField, NumberField, RawField,
     FontField, ColourField, PointField, ComputedField
 )
 
@@ -36,7 +37,17 @@ class MonthlyStatsSkin(Skin):
 
     top_hours_font: FontField = ('Black', 36)
     top_hours_colour: ColourField = '#FFFFFF'
-    top_hours_bg: AssetField = 'monthly/top/hours_bg.png'
+
+    top_hours_bg_mask: AssetField = 'monthly/hours_bg_mask.png'
+    top_hours_bg_colour: ColourField = '#0B465E'
+    top_hours_bg_colour_override: ColourField = None
+    top_hours_bg: BlobField = FieldDesc(
+        BlobField,
+        mask_field='top_hours_bg_mask',
+        colour_field='top_hours_bg_colour',
+        colour_field_override='top_hours_bg_colour_override'
+    )
+
     top_hours_sep: NumberField = 100
 
     top_line_width: NumberField = 10
@@ -47,19 +58,35 @@ class MonthlyStatsSkin(Skin):
     top_date_colour: ColourField = '#FFFFFF'
     top_date_height: ComputedField = lambda skin: skin.top_date_font.getsize('31')[1]
 
-    top_this_end: AssetField = 'monthly/top/this_end.png'
+    top_bar_mask: RGBAAssetField = 'monthly/bar_mask.png'
+
     top_this_colour: ColourField = '#DDB21D'
+    top_this_color_override: ColourField = None
 
-    top_last_end: AssetField = 'monthly/top/last_end.png'
-    top_last_colour: ColourField = '#377689'
+    top_last_colour: ColourField = '#377689CC'
+    top_last_color_override: ColourField = None
 
-    top_this_hours_font: FontField = ('Light', 20)
+    top_this_bar_full: BlobField = FieldDesc(
+        BlobField,
+        mask_field='top_bar_mask',
+        colour_field='top_this_colour',
+        colour_field_override='top_this_colour_override'
+    )
+
+    top_last_bar_full: BlobField = FieldDesc(
+        BlobField,
+        mask_field='top_bar_mask',
+        colour_field='top_last_colour',
+        colour_field_override='top_last_colour_override'
+    )
+
+    top_this_hours_font: FontField = ('Medium', 20)
     top_this_hours_colour: ColourField = '#DDB21D'
 
     top_time_bar_sep: NumberField = 7
     top_time_sep: NumberField = 5
 
-    top_last_hours_font: FontField = ('Light', 20)
+    top_last_hours_font: FontField = ('Medium', 20)
     top_last_hours_colour: ColourField = '#5F91A1'
 
     top_gap: NumberField = 40
@@ -69,23 +96,35 @@ class MonthlyStatsSkin(Skin):
     # Summary
     summary_pre_gap: NumberField = 50
 
-    this_month_image: AssetField = 'monthly/summary_this.png'
+    summary_mask: AssetField = 'monthly/summary_mask.png'
+    this_month_image: BlobField = FieldDesc(
+        BlobField,
+        mask_field='summary_mask',
+        colour_field='top_this_colour',
+        colour_field_override='top_this_colour_override'
+    )
     this_month_font: FontField = ('Light', 23)
     this_month_colour: ColourField = '#BABABA'
 
     summary_sep: NumberField = 300
 
-    last_month_image: AssetField = 'monthly/summary_last.png'
     last_month_font: FontField = ('Light', 23)
     last_month_colour: ColourField = '#BABABA'
+    last_month_image: BlobField = FieldDesc(
+        BlobField,
+        mask_field='summary_mask',
+        colour_field='top_last_colour',
+        colour_field_override='top_last_colour_override'
+    )
 
     summary_gap: NumberField = 50
 
     # Bottom
-    bottom_frame: AssetField = 'monthly/bottom/frame.png'
+    bottom_frame: AssetField = 'monthly/bottom_frame.png'
     bottom_margins: PointField = (100, 100)
 
-    heatmap_mask: AssetField = 'monthly/bottom/blob.png'
+    heatmap_mask: AssetField = 'monthly/heatmap_blob_mask.png'
+    heatmap_empty_colour: ColourField = "#082534"
     heatmap_colours: RawField = [
         '#0E2A77',
         '#15357D',
@@ -106,12 +145,29 @@ class MonthlyStatsSkin(Skin):
     ]
     heatmap_colours.reverse()
 
-    weekday_background: AssetField = 'monthly/bottom/weekday.png'
+    weekday_background_mask: AssetField = 'monthly/weekday_mask.png'
+    weekday_background_colour: ColourField = '#60606038'
+    weekday_background_colour_override: ColourField = None
+    weekday_background: BlobField = FieldDesc(
+        BlobField,
+        mask_field='weekday_background_mask',
+        colour_field='weekday_background_colour',
+        colour_field_override='weekday_background_colour_override'
+    )
+
     weekday_font: FontField = ('Black', 26.85)
     weekday_colour: ColourField = '#FFFFFF'
     weekday_sep: NumberField = 20
 
-    month_background: AssetField = 'monthly/bottom/month_bg.png'
+    month_background_mask: AssetField = 'monthly/month_mask.png'
+    month_background_colour: ColourField = '#60606038'
+    month_background_colour_override: ColourField = None
+    month_background: BlobField = FieldDesc(
+        BlobField,
+        mask_field='month_background_mask',
+        colour_field='month_background_colour',
+        colour_field_override='month_background_colour_override'
+    )
     month_font: FontField = ('Bold', 25.75)
     month_colour: ColourField = '#FFFFFF'
     month_sep: ComputedField = lambda skin: (
@@ -122,7 +178,6 @@ class MonthlyStatsSkin(Skin):
     ) // 3
     month_gap: NumberField = 25
 
-    btm_frame: AssetField = 'monthly/bottom/frame.png'
     btm_grid_x: ComputedField = lambda skin: (skin.month_background.width - skin.heatmap_mask.width) // 5
     btm_grid_y: ComputedField = lambda skin: skin.btm_grid_x
 
@@ -136,10 +191,12 @@ class MonthlyStatsSkin(Skin):
     )
 
     # Date text
-    date_font: FontField = ('Bold', 28)
-    date_colour: ColourField = '#6f6e6f'
-    date_gap: NumberField = 50
+    footer_font: FontField = ('Bold', 28)
+    footer_colour: ColourField = '#6f6e6f'
+    footer_gap: NumberField = 50
 
+
+# TODO: Month hour bars.. Blobasset full bars and use them as masks, e.g. profile progress bar.
 
 class MonthlyStatsPage(Layout):
     def __init__(self, skin, name, discrim, sessions, date, current_streak, longest_streak, first_session_start):
@@ -259,17 +316,17 @@ class MonthlyStatsPage(Layout):
 
         # Draw the footer
         ypos = image.height
-        ypos -= self.skin.date_gap
+        ypos -= self.skin.footer_gap
         date_text = self.data_date.strftime(
             "Monthly Statistics • As of %d %b • {} {}".format(self.data_name, self.data_discrim)
         )
-        size = self.skin.date_font.getsize(date_text)
+        size = self.skin.footer_font.getsize(date_text)
         ypos -= size[1]
         draw.text(
             ((image.width - size[0]) // 2, ypos),
             date_text,
-            font=self.skin.date_font,
-            fill=self.skin.date_colour
+            font=self.skin.footer_font,
+            fill=self.skin.footer_colour
         )
         return image
 
@@ -324,7 +381,7 @@ class MonthlyStatsPage(Layout):
     def draw_top(self) -> Image:
         size_x = (
             self.skin.top_hours_bg.width // 2 + self.skin.top_hours_sep
-            + (self.this_month_days - 1) * self.skin.top_grid_x + self.skin.top_this_end.width // 2
+            + (self.this_month_days - 1) * self.skin.top_grid_x + self.skin.top_bar_mask.width // 2
             + self.skin.top_hours_bg.width // 2
         )
         size_y = (
@@ -391,9 +448,13 @@ class MonthlyStatsPage(Layout):
                 height = (4 * self.skin.top_grid_y) * (hours / self.max_hour_label)
                 height = int(height)
 
-                if height >= self.skin.top_this_end.height:
-                    bar = self.draw_vert_bar(height, last=draw_last)
-                    bar_height = max(bar.height, bar_height)
+                if height >= self.skin.top_bar_mask.width:
+                    bar = self.draw_vertical_bar(
+                        height,
+                        self.skin.top_last_bar_full if draw_last else self.skin.top_this_bar_full,
+                        self.skin.top_bar_mask
+                    )
+                    bar_height = max(height, bar_height)
                     image.alpha_composite(
                         bar,
                         (xpos - bar.width // 2, y0 - bar.height)
@@ -416,7 +477,7 @@ class MonthlyStatsPage(Layout):
                         fill=self.skin.top_last_hours_colour,
                         font=self.skin.top_last_hours_font
                     )
-                    txpos += self.skin.top_last_hours_font.getlength('  '.join(text))
+                    txpos += self.skin.top_last_hours_font.getlength(last_text)
                 if this_hours:
                     this_text = "{} H  ".format(int(this_hours))
                     text_draw.text(
@@ -436,36 +497,24 @@ class MonthlyStatsPage(Layout):
 
         return image
 
-    def draw_vert_bar(self, height, last=False) -> Image:
-        image = Image.new('RGBA', (self.skin.top_this_end.width - 1, height))
+    def draw_vertical_bar(self, height, full_bar, mask_bar, crop=False):
+        y_2 = mask_bar.height
+        y_1 = height
 
-        if last:
-            end = self.skin.top_last_end
-            colour = self.skin.top_last_colour
-        else:
-            end = self.skin.top_this_end
-            colour = self.skin.top_this_colour
+        image = Image.new('RGBA', full_bar.size)
+        image.paste(mask_bar, (0, y_2 - y_1), mask=mask_bar)
+        image.paste(full_bar, mask=image)
 
-        image.paste(
-            end,
-            ((image.width - end.width) // 2, 0)
-        )
-        image.paste(
-            end,
-            ((image.width - end.width) // 2, height - end.height)
-        )
-        ImageDraw.Draw(image).rectangle(
-            (
-                ((image.width - end.width) // 2, end.height // 2),
-                (end.width, height - end.height // 2),
-            ),
-            fill=colour,
-            width=0
-        )
+        if crop:
+            image = image.crop(
+                (0, y_2 - y_1), (image.width, y_2 - y_1),
+                (image.height, 0), (image.height, image.width)
+            )
+
         return image
 
     def draw_bottom(self) -> Image:
-        image = self.skin.btm_frame
+        image = self.skin.bottom_frame
         draw = ImageDraw.Draw(image)
 
         xpos, ypos = self.skin.bottom_margins
@@ -631,15 +680,15 @@ class MonthlyStatsPage(Layout):
     def draw_bubble(self, time):
         # Calculate colour level
         if time == 0:
-            return self.skin.heatmap_mask
+            colour = self.skin.heatmap_empty_colour
         else:
             amount = min(time / self.average_time, 2) / 2
             index = math.ceil(amount * len(self.skin.heatmap_colours)) - 1
             colour = self.skin.heatmap_colours[index]
 
-            image = Image.new('RGBA', self.skin.heatmap_mask.size)
-            image.paste(colour, mask=self.skin.heatmap_mask)
-            return image
+        image = Image.new('RGBA', self.skin.heatmap_mask.size)
+        image.paste(colour, mask=self.skin.heatmap_mask)
+        return image
 
 
 class MonthlyStatsCard(Card):

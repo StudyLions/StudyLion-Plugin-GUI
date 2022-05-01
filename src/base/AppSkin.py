@@ -81,8 +81,7 @@ class AppSkin:
                 )
             data.update(card_data)
 
-        # Remove duplicates so we don't waste time searching
-        data['PATH'] = list(set(asset_path))
+        data['PATH'] = asset_path
         return data
 
     @classmethod

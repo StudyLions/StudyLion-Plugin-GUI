@@ -4,8 +4,8 @@ from PIL import Image, ImageDraw
 
 from ..base import Card, Layout, fielded, Skin
 from ..base.Skin import (
-    AssetField, StringField, NumberField, RawField,
-    FontField, ColourField, PointField, ComputedField
+    AssetField, BlobField, StringField, NumberField, RawField,
+    FontField, ColourField, PointField, ComputedField, FieldDesc
 )
 
 
@@ -42,13 +42,11 @@ class StatsSkin(Skin):
     }
 
     # Background images
-    bg_path: AssetField = "stats/5_row_bg.png"
-    alt_bg_path: AssetField = "stats/6_row_bg.png"
+    background: AssetField = "stats/background.png"
 
     # Inner container
     container_position: PointField = (60, 50)  # Position of top left corner
-    container_size: PointField = (1410, 675)  # Size of the inner container
-    alt_container_size: PointField = (1410, 800)  # Size of the inner container
+    container_size: PointField = (1410, 800)  # Size of the inner container
 
     # Major (topmost) header
     header_font: FontField = ('Black', 27)
@@ -58,11 +56,11 @@ class StatsSkin(Skin):
 
     # First column
     col1_header: StringField = 'STATISTICS'
+    stats_subheader_pregap: NumberField = 8
     stats_subheader_font: FontField = ('Black', 21)
     stats_subheader_colour: ColourField = '#FFFFFF'
     stats_subheader_size: ComputedField = lambda skin: skin.stats_subheader_font.getsize('LEADERBOARD POSITION')
-    stats_text_gap: NumberField = 12  # Gap between stat lines
-    alt_stats_text_gap: NumberField = 16  # Gap between stat lines
+    stats_text_gap: NumberField = 13  # Gap between stat lines
     stats_text_font: FontField = ('SemiBold', 19)
     stats_text_height: ComputedField = lambda skin: skin.stats_text_font.getsize('DAILY')[1]
     stats_text_colour: ColourField = '#BABABA'
@@ -71,16 +69,9 @@ class StatsSkin(Skin):
         skin.stats_subheader_size[0],
         skin.header_height + skin.header_gap
         + 3 * skin.stats_subheader_size[1]
+        + 2 * skin.stats_subheader_pregap
         + 6 * skin.stats_text_height
         + 8 * skin.stats_text_gap
-    )
-
-    alt_col1_size: ComputedField = lambda skin: (
-        skin.stats_subheader_size[0],
-        skin.header_height + skin.header_gap
-        + 3 * skin.stats_subheader_size[1]
-        + 6 * skin.stats_text_height
-        + 8 * skin.alt_stats_text_gap
     )
 
     # Second column
@@ -97,12 +88,31 @@ class StatsSkin(Skin):
     cal_weekday_height: ComputedField = lambda skin: skin.cal_weekday_font.getsize('S')[1]
     cal_weekday_gap: NumberField = 23
     cal_number_font: FontField = ('Medium', 20)
+    cal_number_end_colour: ColourField = '#BABABA'
     cal_number_colour: ColourField = '#BABABA'
-    cal_number_gap: NumberField = 20
+    cal_number_gap: NumberField = 28
+    alt_cal_number_gap: NumberField = 20
     cal_number_size: ComputedField = lambda skin: skin.cal_number_font.getsize('88')
-    cal_streak_end: AssetField = 'stats/streak_endpoint.png'
-    cal_streak_middle: AssetField = 'stats/streak_middle.png'
+
+    cal_streak_mask: AssetField = 'stats/streak_mask.png'
+
+    cal_streak_end_colour: ColourField = '#1473A2'
+    cal_streak_end_colour_override: ColourField = None
+    cal_streak_end: BlobField = FieldDesc(
+        BlobField,
+        mask_field='cal_streak_mask',
+        colour_field='cal_streak_end_colour',
+        colour_override_field='cal_streak_end_colour_override'
+    )
+
     cal_streak_middle_colour: ColourField = '#1B3343'
+    cal_streak_middle_colour_override: ColourField = None
+    cal_streak_middle: BlobField = FieldDesc(
+        BlobField,
+        mask_field='cal_streak_mask',
+        colour_field='cal_streak_middle_colour',
+        colour_override_field='cal_streak_middle_colour_override'
+    )
 
     cal_size: ComputedField = lambda skin: (
         7 * skin.cal_number_size[0] + 6 * skin.cal_column_sep + skin.cal_streak_end.width // 2,
@@ -113,7 +123,7 @@ class StatsSkin(Skin):
 
     alt_cal_size: ComputedField = lambda skin: (
         7 * skin.cal_number_size[0] + 6 * skin.cal_column_sep + skin.cal_streak_end.width // 2,
-        6 * skin.cal_number_size[1] + 5 * skin.cal_number_gap
+        6 * skin.cal_number_size[1] + 5 * skin.alt_cal_number_gap
         + skin.cal_weekday_height + skin.cal_weekday_gap
         + skin.cal_streak_end.height // 2
     )
@@ -162,18 +172,15 @@ class StatsLayout(Layout):
         self.alt_layout = (month_days + self.first_weekday + 1) > 35  # Whether to use the alternate layout
 
         if self.alt_layout:
-            self.skin.fields['bg_path'].value = self.skin.alt_bg_path
-            self.skin.fields['container_size'].value = self.skin.alt_container_size
+            self.skin.fields['cal_number_gap'].value = self.skin.alt_cal_number_gap
             self.skin.fields['cal_size'].value = self.skin.alt_cal_size
             self.skin.fields['col2_size'].value = self.skin.alt_col2_size
-            self.skin.fields['stats_text_gap'].value = self.skin.alt_stats_text_gap
-            self.skin.fields['col1_size'].value = self.skin.alt_col1_size
 
         self.image: Image = None  # Final Image
 
     def draw(self):
         # Load/copy background
-        image = self.skin.bg_path
+        image = self.skin.background
 
         # Draw inner container
         inner_container = self.draw_inner_container()
@@ -244,6 +251,7 @@ class StatsLayout(Layout):
         )
         position += self.skin.stats_text_height + self.skin.stats_text_gap
 
+        position += self.skin.stats_subheader_pregap
         # Study time
         draw.text(
             (0, position),
@@ -287,6 +295,7 @@ class StatsLayout(Layout):
 
         position += self.skin.stats_subheader_size[1] // 2
 
+        position += self.skin.stats_subheader_pregap
         # Workouts
         workout_text = "WORKOUTS: "
         draw.text(
@@ -449,8 +458,6 @@ class StatsLayout(Layout):
                 )
 
         for i, (x, y) in enumerate(centres):
-            numstr = str(i + 1)
-
             # Streak endpoint
             if i + 1 in streak_starts:
                 if i + 1 in streak_pairs and (i + offset) % 7 != 6:
@@ -467,11 +474,14 @@ class StatsLayout(Layout):
                     (x - self.skin.cal_streak_end.width // 2, y - self.skin.cal_streak_end.height // 2)
                 )
 
+        for i, (x, y) in enumerate(centres):
+            numstr = str(i + 1)
+
             draw.text(
                 (x, y),
                 numstr,
                 font=self.skin.cal_number_font,
-                fill=self.skin.cal_number_colour,
+                fill=self.skin.cal_number_end_colour if (i+1 in streak_starts) else self.skin.cal_number_colour,
                 anchor='mm'
             )
 

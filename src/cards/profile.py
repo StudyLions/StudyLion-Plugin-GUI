@@ -5,7 +5,7 @@ from ..utils import get_avatar_key
 from ..base import Card, Layout, fielded, Skin, FieldDesc
 from ..base.Avatars import avatar_manager
 from ..base.Skin import (
-    AssetField, AssetPathField, NumberField,
+    AssetField, RGBAAssetField, AssetPathField, NumberField, BlobField,
     FontField, ColourField, PointField, ComputedField
 )
 
@@ -20,8 +20,8 @@ class ProfileSkin(Skin):
     bg_path: AssetField = "profile/background.png"
 
     # Inner container
-    container_position: PointField = (70, 50)  # Position of top left corner
-    container_size: PointField = (1400, 575)  # Size of the inner container
+    container_position: PointField = (70, 65)  # Position of top left corner
+    container_size: PointField = (1400, 600)  # Size of the inner container
 
     # Header
     header_font: FontField = ('BlackItalic', 28)
@@ -36,31 +36,32 @@ class ProfileSkin(Skin):
     avatar_size: ComputedField = lambda skin: skin.avatar_outline.size
     avatar_gap: NumberField = 10
 
-    coin_icon: AssetField = 'profile/coin.png'
-    coin_font: FontField = ('Black', 14)
-    coin_colour: ColourField = '#DDB21D'
-    coin_sep: NumberField = 5
-    coin_gap: NumberField = 15
+    counter_bg_mask: AssetField = "profile/counter_bg_mask.png"
+    counter_bg_colour: ColourField = "#515B8D60"
+    counter_background: BlobField = FieldDesc(
+        BlobField,
+        mask_field='counter_bg_mask',
+        colour_field='counter_bg_colour'
+    )
 
-    answers_font: FontField = ('Black', 12)
-    answers_colour: ColourField = '#FFFFFF'
-    answers_height: ComputedField = lambda skin: skin.answers_font.getsize('ANSWERS')[1]
-    answers_gap: NumberField = 10
-    attendance_font: FontField = answers_font
-    attendance_colour: ColourField = answers_colour
-    attendance_icon_happy: AssetField = 'profile/attendance_happy.png'
-    attendance_icon_sad: AssetField = 'profile/attendance_sad.png'
-    attendance_threshold: NumberField = FieldDesc(NumberField, 0.8, scaled=False, integer=False)
+    coin_icon: AssetField = "icons/coin.png"
+    gem_icon: AssetField = "icons/gem.png"
+    gift_icon: AssetField = "icons/gift.png"
+
+    counter_font: FontField = ('Black', 14)
+    counter_colour: ColourField = '#FFFFFF'
+    counter_icon_align: NumberField = 20
+    counter_text_align: NumberField = 40
+
+    counter_gap: NumberField = 5
 
     col1_size: ComputedField = lambda skin: (
         skin.avatar_size[0],
         skin.avatar_size[1] + skin.avatar_gap
-        + skin.coin_icon.height + skin.coin_gap
-        + skin.answers_height + skin.answers_gap
-        + skin.attendance_icon_happy.height
+        + 3 * skin.counter_background.height + 2 * skin.counter_gap
     )
 
-    column_sep: NumberField = 20
+    column_sep: NumberField = 40
 
     # Column 2
     subheader_font: FontField = ('Black', 27)
@@ -88,10 +89,19 @@ class ProfileSkin(Skin):
     )
 
     # Profile section
-    badge_end_blob: AssetField = 'profile/badge_end.png'
     badge_font: FontField = ('Black', 13)
     badge_text_colour: ColourField = '#FFFFFF'
     badge_blob_colour: ColourField = '#1473A2'
+    badge_blob_colour_override: ColourField = None
+    badge_blob_mask: AssetField = 'profile/badge_end_mask.png'
+
+    badge_end_blob: BlobField = FieldDesc(
+        BlobField,
+        mask_field='badge_blob_mask',
+        colour_field='badge_blob_colour',
+        colour_override_field='badge_blob_colour_override'
+    )
+
     badge_gap: NumberField = 5
     badge_min_sep: NumberField = 5
     profile_size: ComputedField = lambda skin: (
@@ -108,8 +118,23 @@ class ProfileSkin(Skin):
     rank_hours_colour: ColourField = '#FFFFFF'
 
     bar_gap: NumberField = 5
-    bar_full: AssetField = 'profile/progress_full.png'
-    bar_empty: AssetField = 'profile/progress_empty.png'
+    bar_mask: RGBAAssetField = 'profile/progress_mask.png'
+    bar_full_colour: ColourField = '#DDB21D'
+    bar_full_colour_override: ColourField = None
+    bar_full: BlobField = FieldDesc(
+        BlobField,
+        mask_field='bar_mask',
+        colour_field='bar_full_colour',
+        colour_override_field='bar_full_colour_override'
+    )
+    bar_empty_colour: ColourField = '#2F4858'
+    bar_empty_colour_override: ColourField = None
+    bar_empty: BlobField = FieldDesc(
+        BlobField,
+        mask_field='bar_mask',
+        colour_field='bar_empty_colour',
+        colour_override_field='bar_empty_colour_override'
+    )
 
     next_rank_font: FontField = ('Italic', 15)
     next_rank_colour: ColourField = '#FFFFFF'
@@ -125,7 +150,7 @@ class ProfileSkin(Skin):
 
 class ProfileLayout(Layout):
     def __init__(self, skin, name, discrim,
-                 coins, time, answers, attendance,
+                 coins, time, gems, gifts,
                  avatar,
                  badges=(),
                  achievements=(),
@@ -145,8 +170,8 @@ class ProfileLayout(Layout):
         self.data_coins = coins
         self.data_time = time
         self.data_hours = self.data_time / 3600
-        self.data_answers = answers
-        self.data_attendance = attendance
+        self.data_gems = gems
+        self.data_gifts = gifts
 
         self.data_badges = badges
         self.data_achievements = achievements
@@ -223,8 +248,14 @@ class ProfileLayout(Layout):
         _avatar.paste((0, 0, 0, 0), mask=self.skin.avatar_mask)
 
         # Place the image on a larger canvas
-        avatar_image = Image.new('RGBA', (264, 264))
-        avatar_image.paste(_avatar, (3, 4))
+        avatar_image = Image.new('RGBA', self.skin.avatar_outline.size)
+        avatar_image.paste(
+            _avatar,
+            (
+                (self.skin.avatar_outline.width - _avatar.width) // 2,
+                (self.skin.avatar_outline.height - _avatar.height) // 2,
+            )
+        )
 
         # Add the outline over the masked avatar
         avatar_image.alpha_composite(self.skin.avatar_outline)
@@ -236,63 +267,41 @@ class ProfileLayout(Layout):
         )
         position += self.skin.avatar_size[1] + self.skin.avatar_gap
 
-        # Draw coins
-        xposition = 0
-        col1.alpha_composite(
-            self.skin.coin_icon,
-            (0, position)
+        # Draw counters
+        counters = (
+            (self.skin.coin_icon, self.data_coins),
+            (self.skin.gem_icon, self.data_gems),
+            (self.skin.gift_icon, self.data_gifts),
         )
-        xposition += self.skin.coin_icon.width + self.skin.coin_sep
-        draw.text(
-            (xposition, position + self.skin.coin_icon.height // 2),
-            "{:,}".format(self.data_coins),
-            font=self.skin.coin_font,
-            fill=self.skin.coin_colour,
-            anchor='lm'
-        )
-        position += self.skin.coin_icon.height + self.skin.coin_gap
-
-        # Draw answers
-        draw.text(
-            (0, position),
-            "ANSWERS: {}".format(self.data_answers or 'N/A'),
-            font=self.skin.answers_font,
-            fill=self.skin.answers_colour,
-            anchor='lm'
-        )
-        position += self.skin.answers_height + self.skin.answers_gap
-
-        # Draw attendance
-        xposition = 0
-        text = "ATTENDANCE: "
-        draw.text(
-            (0, position),
-            text,
-            font=self.skin.attendance_font,
-            fill=self.skin.attendance_colour,
-            anchor='lm'
-        )
-        xposition += int(self.skin.attendance_font.getlength(text))
-        if self.data_attendance is None:
-            draw.text(
-                (xposition, position),
-                'N/A',
-                font=self.skin.attendance_font,
-                fill=self.skin.attendance_colour,
-                anchor='lm'
-            )
-        else:
-            if self.data_attendance > self.skin.attendance_threshold:
-                icon = self.skin.attendance_icon_happy
-            else:
-                icon = self.skin.attendance_icon_sad
-
+        for icon, amount in counters:
             col1.alpha_composite(
-                icon,
-                (xposition, position - icon.height // 2)
+                self.draw_counter(icon, amount),
+                ((self.skin.avatar_outline.width - self.skin.counter_background.width) // 2, position)
             )
+            position += self.skin.counter_background.height + self.skin.counter_gap
 
         return col1
+
+    def draw_counter(self, icon, amount):
+        image = self.skin.counter_background.copy()
+        draw = ImageDraw.Draw(image)
+
+        image.alpha_composite(
+            icon,
+            (
+                self.skin.counter_icon_align - icon.width // 2,
+                (self.skin.counter_background.height - icon.height) // 2
+            )
+        )
+
+        draw.text(
+            (self.skin.counter_text_align, self.skin.counter_background.height // 2),
+            f"{amount:,}",
+            font=self.skin.counter_font,
+            fill=self.skin.counter_colour,
+            anchor='lm'
+        )
+        return image
 
     def draw_column_2(self) -> Image:
         # Create new image for column 1
@@ -555,13 +564,18 @@ class ProfileLayout(Layout):
         elif progress == 1:
             return self.skin.bar_full
         else:
-            _bar = self.skin.bar_empty.copy()
+            _bar = self.skin.bar_empty
             x = -1 * int((1 - progress) * self.skin.bar_full.width)
-            _bar.alpha_composite(
+            _bar.paste(
                 self.skin.bar_full,
-                (x, 0)
+                (x, 0),
+                mask=self.skin.bar_mask
             )
-            bar = Image.composite(_bar, self.skin.bar_empty, self.skin.bar_empty)
+            bar = Image.new('RGBA', _bar.size)
+            bar.paste(
+                _bar,
+                mask=self.skin.bar_mask
+            )
             return bar
 
 
@@ -594,8 +608,8 @@ class ProfileCard(Card):
             'avatar': get_avatar_key(ctx.client, ctx.author.id),
             'coins': 58596,
             'time': 3750 * 3600,
-            'answers': 10,
-            'attendance': 0.9,
+            'gems': 10000,
+            'gifts': 100,
             'badges': (
                 'STUDYING: MEDICINE',
                 'HOBBY: MATHS',

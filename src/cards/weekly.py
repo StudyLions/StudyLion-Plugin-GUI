@@ -1,13 +1,13 @@
 import os
 import math
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageColor
 from datetime import timedelta, datetime, timezone
 
 from ..utils import resolve_asset_path
 from ..base import Card, Layout, fielded, Skin
 from ..base.Skin import (
-    AssetField, RGBAAssetField, StringField, NumberField, RawField,
-    FontField, ColourField, ComputedField
+    AssetField, RGBAAssetField, AssetPathField, BlobField, StringField, NumberField, PointField, RawField,
+    FontField, ColourField, ComputedField, FieldDesc
 )
 
 
@@ -35,7 +35,17 @@ class WeeklyStatsSkin(Skin):
 
     top_hours_font: FontField = ('Bold', 36.35)
     top_hours_colour: ColourField = '#FFFFFF'
-    top_hours_bg: AssetField = 'weekly/top/hours_bg.png'
+
+    top_hours_bg_mask: AssetField = 'weekly/hours_bg_mask.png'
+    top_hours_bg_colour: ColourField = '#0B465E'  # TODO: Check this
+    top_hours_bg_colour_override: ColourField = None
+    top_hours_bg: BlobField = FieldDesc(
+        BlobField,
+        mask_field='top_hours_bg_mask',
+        colour_field='top_hours_bg_colour',
+        colour_field_override='top_hours_bg_colour_override'
+    )
+
     top_hours_sep: NumberField = 100
 
     top_line_width: NumberField = 10
@@ -50,29 +60,65 @@ class WeeklyStatsSkin(Skin):
     top_date_colour: ColourField = '#808080'
     top_date_height: ComputedField = lambda skin: skin.top_date_font.getsize('8/8')[1]
 
-    top_this_top: RGBAAssetField = 'weekly/top/this_top.png'
-    top_this_colour: ColourField = '#DDB21D'
-    top_this_btm: RGBAAssetField = 'weekly/top/this_bottom.png'
+    top_bar_mask: RGBAAssetField = 'weekly/top_bar_mask.png'
 
-    top_last_top: RGBAAssetField = 'weekly/top/last_top.png'
+    top_this_colour: ColourField = '#DDB21D'
+    top_this_color_override: ColourField = None
+
     top_last_colour: ColourField = '#377689CC'
-    top_last_btm: RGBAAssetField = 'weekly/top/last_bottom.png'
+    top_last_color_override: ColourField = None
+
+    top_this_bar_full: BlobField = FieldDesc(
+        BlobField,
+        mask_field='top_bar_mask',
+        colour_field='top_this_colour',
+        colour_field_override='top_this_colour_override'
+    )
+
+    top_last_bar_full: BlobField = FieldDesc(
+        BlobField,
+        mask_field='top_bar_mask',
+        colour_field='top_last_colour',
+        colour_field_override='top_last_colour_override'
+    )
 
     top_gap: NumberField = 80
 
     weekdays: RawField = ('M', 'T', 'W', 'T', 'F', 'S', 'S')
 
     # Bottom
-    btm_weekly_background: AssetField = 'weekly/bottom/weekday_bg.png'
+    btm_weekly_background_size: PointField = (66, 400)
+    btm_weekly_background_colour: ColourField = '#06324880'
+    btm_weekly_background: ComputedField = lambda skin: (
+        Image.new(
+            'RGBA',
+            skin.btm_weekly_background_size,
+            color=ImageColor.getrgb(skin.btm_weekly_background_colour)
+        )
+    )
 
-    btm_this_end: AssetField = 'weekly/bottom/this_end.png'
+    btm_timeline_end_mask: RGBAAssetField = 'weekly/timeline_end_mask.png'
+
     btm_this_colour: ColourField = '#DDB21D'
+    btm_this_colour_override: ColourField = None
+    btm_this_end: BlobField = FieldDesc(
+        BlobField,
+        mask_field='btm_timeline_end_mask',
+        colour_field='btm_this_colour',
+        colour_override_field='btm_this_colour_override'
+    )
 
-    btm_last_end: AssetField = 'weekly/bottom/last_end.png'
     btm_last_colour: ColourField = '#5E6C747F'
+    btm_last_colour_override: ColourField = None
+    btm_last_end: BlobField = FieldDesc(
+        BlobField,
+        mask_field='btm_timeline_end_mask',
+        colour_field='btm_last_colour',
+        colour_override_field='btm_last_colour_override'
+    )
 
     btm_horiz_width: ComputedField = lambda skin: skin.btm_this_end.height
-    btm_sep: ComputedField = lambda skin: (skin.btm_weekly_background.height - 7 * skin.btm_horiz_width) // 6
+    btm_sep: ComputedField = lambda skin: (skin.btm_weekly_background_size[1] - 7 * skin.btm_horiz_width) // 6
 
     btm_vert_width: NumberField = 10
 
@@ -91,7 +137,7 @@ class WeeklyStatsSkin(Skin):
     btm_bar_vert_colour: ColourField = "#042231B2"
     btm_bar_weekday_colour: ColourField = "#F9CDB77F"
 
-    btm_emoji_path: StringField = "weekly/bottom/emojis"
+    btm_emoji_path: StringField = "weekly/emojis"
     btm_emojis: ComputedField = lambda skin: {
         state: Image.open(
             resolve_asset_path(
@@ -105,20 +151,32 @@ class WeeklyStatsSkin(Skin):
     # Summary
     summary_pre_gap: NumberField = 50
 
-    this_week_image: AssetField = 'weekly/summary_this.png'
+    summary_mask: AssetField = 'weekly/summary_mask.png'
+
     this_week_font: FontField = ('Light', 23)
     this_week_colour: ColourField = '#BABABA'
+    this_week_image: BlobField = FieldDesc(
+        BlobField,
+        mask_field='summary_mask',
+        colour_field='top_this_colour',
+        colour_field_override='top_this_colour_override'
+    )
 
     summary_sep: NumberField = 300
 
-    last_week_image: AssetField = 'weekly/summary_last.png'
     last_week_font: FontField = ('Light', 23)
     last_week_colour: ColourField = '#BABABA'
+    last_week_image: BlobField = FieldDesc(
+        BlobField,
+        mask_field='summary_mask',
+        colour_field='top_last_colour',
+        colour_field_override='top_last_colour_override'
+    )
 
     # Date text
-    date_font: FontField = ('Bold', 28)
-    date_colour: ColourField = '#6f6e6f'
-    date_gap: NumberField = 50
+    footer_font: FontField = ('Bold', 28)
+    footer_colour: ColourField = '#6f6e6f'
+    footer_gap: NumberField = 50
 
 
 class WeeklyStatsPage(Layout):
@@ -271,17 +329,17 @@ class WeeklyStatsPage(Layout):
 
         # Draw the footer
         ypos = image.height
-        ypos -= self.skin.date_gap
+        ypos -= self.skin.footer_gap
         date_text = self.data_date.strftime(
             "Weekly Statistics • As of %d %b • {} {}".format(self.data_name, self.data_discrim)
         )
-        size = self.skin.date_font.getsize(date_text)
+        size = self.skin.footer_font.getsize(date_text)
         ypos -= size[1]
         draw.text(
             ((image.width - size[0]) // 2, ypos),
             date_text,
-            font=self.skin.date_font,
-            fill=self.skin.date_colour
+            font=self.skin.footer_font,
+            fill=self.skin.footer_colour
         )
         return image
 
@@ -336,7 +394,7 @@ class WeeklyStatsPage(Layout):
     def draw_top(self) -> Image:
         size_x = (
             self.skin.top_hours_bg.width // 2 + self.skin.top_hours_sep
-            + 6 * self.skin.top_grid_x + self.skin.top_this_top.width // 2
+            + 6 * self.skin.top_grid_x + self.skin.top_bar_mask.width // 2
             + self.skin.top_hours_bg.width // 2
         )
         size_y = (
@@ -405,8 +463,12 @@ class WeeklyStatsPage(Layout):
                 height = (4 * self.skin.top_grid_y) * (hours / self.max_hour_label)
                 height = int(height)
 
-                if height >= 2 * self.skin.top_this_top.height:
-                    bar = self.draw_vert_bar(height, last=draw_last)
+                if height >= 2 * self.skin.top_bar_mask.width:
+                    bar = self.draw_vertical_bar(
+                        height,
+                        self.skin.top_last_bar_full if draw_last else self.skin.top_this_bar_full,
+                        self.skin.top_bar_mask
+                    )
                     image.alpha_composite(
                         bar,
                         (xpos - bar.width // 2, y0 - bar.height)
@@ -414,39 +476,41 @@ class WeeklyStatsPage(Layout):
 
         return image
 
-    def draw_vert_bar(self, height, last=False) -> Image:
-        image = Image.new('RGBA', (self.skin.top_this_top.width - 2, height))
+    def draw_vertical_bar(self, height, full_bar, mask_bar, crop=False):
+        y_2 = mask_bar.height
+        y_1 = height
 
-        if last:
-            top = self.skin.top_last_top
-            bottom = self.skin.top_last_btm
-            colour = self.skin.top_last_colour
-        else:
-            top = self.skin.top_this_top
-            bottom = self.skin.top_this_btm
-            colour = self.skin.top_this_colour
+        image = Image.new('RGBA', full_bar.size)
+        image.paste(mask_bar, (0, y_2 - y_1), mask=mask_bar)
+        image.paste(full_bar, mask=image)
 
-        image.alpha_composite(
-            top,
-            ((image.width - top.width) // 2, 0)
-        )
-        image.alpha_composite(
-            bottom,
-            ((image.width - bottom.width) // 2, height - bottom.height)
-        )
-        ImageDraw.Draw(image).rectangle(
-            (
-                ((image.width - top.width) // 2, top.height - 1),
-                (top.width, height - bottom.height),
-            ),
-            fill=colour,
-            width=0
-        )
+        if crop:
+            image = image.crop(
+                (0, y_2 - y_1), (image.width, y_2 - y_1),
+                (image.height, 0), (image.height, image.width)
+            )
+
+        return image
+
+    def draw_horizontal_bar(self, length, full_bar, mask_bar, crop=False):
+        x_2 = mask_bar.length
+        x_1 = length
+
+        image = Image.new('RGBA', full_bar.size)
+        image.paste(mask_bar, (x_2 - x_1, 0), mask=mask_bar)
+        image.paste(full_bar, mask=image)
+
+        if crop:
+            image = image.crop(
+                (x_2 - x_1, 0), (image.width, 0),
+                (x_2 - x_1, image.height), (image.width, image.height)
+            )
+
         return image
 
     def draw_bottom(self) -> Image:
         size_x = int(
-            self.skin.btm_weekly_background.width
+            self.skin.btm_weekly_background_size[0]
             + self.skin.btm_grid_x * 25
             + self.skin.btm_day_font.getlength('24') // 2
             + self.skin.btm_vert_width // 2
@@ -460,7 +524,7 @@ class WeeklyStatsPage(Layout):
         draw = ImageDraw.Draw(image)
 
         # Grid origin
-        x0 = self.skin.btm_weekly_background.width + self.skin.btm_vert_width // 2 + self.skin.btm_grid_x
+        x0 = self.skin.btm_weekly_background_size[0] + self.skin.btm_vert_width // 2 + self.skin.btm_grid_x
         y0 = self.skin.btm_day_gap + self.skin.btm_day_height + self.skin.btm_horiz_width // 2
 
         # Draw the hours
@@ -505,7 +569,7 @@ class WeeklyStatsPage(Layout):
         )
 
         # Draw the weekdays
-        xpos = self.skin.btm_weekly_background.width // 2
+        xpos = self.skin.btm_weekly_background_size[0] // 2
         for i, l in enumerate(self.skin.weekdays):
             ypos = y0 + i * self.skin.btm_grid_y
             draw.text(
@@ -537,7 +601,7 @@ class WeeklyStatsPage(Layout):
                 else:
                     width = int(duration / seconds_in_day * day_width)
 
-                bar = self.draw_horizontal_bar(
+                bar = self.draw_timeline_bar(
                     width,
                     last=last,
                     flat_start=flat_start,
@@ -571,7 +635,7 @@ class WeeklyStatsPage(Layout):
                 )
         return image
 
-    def draw_horizontal_bar(self, width, last=False, flat_start=False, flat_end=False) -> Image:
+    def draw_timeline_bar(self, width, last=False, flat_start=False, flat_end=False) -> Image:
         if last:
             end = self.skin.btm_last_end
             colour = self.skin.btm_last_colour
@@ -639,6 +703,10 @@ class WeeklyStatsCard(Card):
                 )
                 pointer += session_duration
                 pointer += int(abs(random.normalvariate(2.5 * 60, 1 * 60)))
+
+        sessions.append(
+            (datetime.now(timezone.utc) - timedelta(minutes=35), datetime.now(timezone.utc))
+        )
 
         return {
             'name': ctx.author.name,
