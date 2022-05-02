@@ -12,7 +12,7 @@ from .config import conf
 
 
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-__skins_location__ = os.path.join(os.path.split(__location__)[-1], conf.section.skin_data_path)
+__skins_location__ = os.path.join(os.path.split(__location__)[0], conf.section.skin_data_path)
 
 
 def skin_path_join(*elements):

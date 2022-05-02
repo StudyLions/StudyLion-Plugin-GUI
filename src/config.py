@@ -1,4 +1,8 @@
+import os
 import configparser as cfgp
+
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+config_path = os.path.join(os.path.split(__location__)[0], 'config', 'gui.conf')
 
 
 class Conf:
@@ -80,4 +84,5 @@ class MapDotProxy:
         return self._map.__getitem__(key)
 
 
-conf = Conf('config/gui.conf')
+print(config_path)
+conf = Conf(config_path)
