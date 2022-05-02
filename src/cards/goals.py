@@ -32,7 +32,7 @@ class _GoalSkin(Skin):
     title_size: ComputedField = lambda skin: skin.title_font.getsize(skin.title_text)
     title_colour: ColourField = '#DDB21D'
     title_underline_gap: NumberField = 10
-    title_underline_width: NumberField = 5
+    title_underline_width: NumberField = 0
     title_gap: NumberField = 50
 
     # Profile section
@@ -220,14 +220,15 @@ class GoalPage(Layout, MiniProfileLayout):
         )
 
         # Underline it
-        title_size = self.skin.title_size
-        ypos += title_size[1] + self.skin.title_underline_gap
-        draw.line(
-            (xpos, ypos, xpos + title_size[0], ypos),
-            fill=self.skin.title_colour,
-            width=self.skin.title_underline_width
-        )
-        ypos += self.skin.title_underline_width + self.skin.title_gap
+        title_size = self.skin.title_font.getsize(self.skin.title_text)
+        ypos += title_size[1] + self.skin.title_gap
+        # ypos += title_size[1] + self.skin.title_underline_gap
+        # draw.line(
+        #     (xpos, ypos, xpos + title_size[0], ypos),
+        #     fill=self.skin.title_colour,
+        #     width=self.skin.title_underline_width
+        # )
+        # ypos += self.skin.title_underline_width + self.skin.title_gap
 
         # Draw the profile
         xpos = self.skin.mini_profile_indent

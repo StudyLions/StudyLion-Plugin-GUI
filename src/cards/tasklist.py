@@ -146,11 +146,11 @@ class TasklistLayout(Layout, MiniProfileLayout):
 
         # Underline it
         ypos += self.skin.title_size[1] + self.skin.title_underline_gap
-        draw.line(
-            (xpos, ypos, xpos + self.skin.title_size[0], ypos),
-            fill=self.skin.title_colour,
-            width=self.skin.title_underline_width
-        )
+        # draw.line(
+        #     (xpos, ypos, xpos + self.skin.title_size[0], ypos),
+        #     fill=self.skin.title_colour,
+        #     width=self.skin.title_underline_width
+        # )
         ypos += self.skin.title_underline_width + self.skin.title_gap
 
         # Draw the profile

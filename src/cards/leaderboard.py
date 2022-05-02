@@ -59,7 +59,7 @@ class LeaderboardSkin(Skin):
     header_text_colour: ColourField = '#DDB21D'
 
     header_text_gap: NumberField = 15
-    header_text_line_width: NumberField = 5
+    header_text_line_width: NumberField = 0
     header_text_line_gap: NumberField = 20
 
     subheader_name_font: FontField = ('SemiBold', 27)
@@ -419,12 +419,12 @@ class LeaderboardPage(Layout):
         ypos += self.skin.header_text_size[1] + self.skin.header_text_gap
 
         # Draw the underline
-        draw.line(
-            (xpos, ypos,
-             xpos + self.skin.header_text_size[0], ypos),
-            fill=self.skin.header_text_colour,
-            width=self.skin.header_text_line_width
-        )
+        # draw.line(
+        #     (xpos, ypos,
+        #      xpos + self.skin.header_text_size[0], ypos),
+        #     fill=self.skin.header_text_colour,
+        #     width=self.skin.header_text_line_width
+        # )
         ypos += self.skin.header_text_line_gap
 
         # Draw the subheader

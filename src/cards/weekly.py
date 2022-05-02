@@ -295,13 +295,14 @@ class WeeklyStatsPage(Layout):
 
         # Underline it
         title_size = self.skin.title_font.getsize(self.skin.title_text)
-        ypos += title_size[1] + self.skin.title_underline_gap
-        draw.line(
-            (xpos, ypos, xpos + title_size[0], ypos),
-            fill=self.skin.title_colour,
-            width=self.skin.title_underline_width
-        )
-        ypos += self.skin.title_underline_width + self.skin.title_gap
+        ypos += title_size[1] + self.skin.title_gap
+        # ypos += title_size[1] + self.skin.title_underline_gap
+        # draw.line(
+        #     (xpos, ypos, xpos + title_size[0], ypos),
+        #     fill=self.skin.title_colour,
+        #     width=self.skin.title_underline_width
+        # )
+        # ypos += self.skin.title_underline_width + self.skin.title_gap
 
         # Draw the top box
         top = self.draw_top()
@@ -588,6 +589,8 @@ class WeeklyStatsPage(Layout):
             ypos = y0 + (6 - i % 7) * self.skin.btm_grid_y
 
             for start, end in day:
+                if end <= start:
+                    continue
                 day_start = start.replace(hour=0, minute=0, second=0, microsecond=0)
 
                 flat_start = (start == day_start)
@@ -703,10 +706,6 @@ class WeeklyStatsCard(Card):
                 )
                 pointer += session_duration
                 pointer += int(abs(random.normalvariate(2.5 * 60, 1 * 60)))
-
-        sessions.append(
-            (datetime.now(timezone.utc) - timedelta(minutes=35), datetime.now(timezone.utc))
-        )
 
         return {
             'name': ctx.author.name,
