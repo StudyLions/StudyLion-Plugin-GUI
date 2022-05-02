@@ -7,14 +7,14 @@ import uuid
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 
+from ..config import conf
 from ..routes import routes
 from .logger import requestid
 
 
 # TODO: General error handling, logging, and return paths for exceptions/null data
-# TODO: Move to config
-PATH = "gui.sock"
-MAX_PROC = 20
+PATH = conf.section.socket_path
+MAX_PROC = conf.section.getint('process_count')
 
 executor: ProcessPoolExecutor = None
 

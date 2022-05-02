@@ -8,9 +8,11 @@ from PIL import ImageFont
 from discord.http import Route
 from discord.utils import to_json
 
+from .config import conf
+
 
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-__skins_location__ = os.path.join(os.path.join(*os.path.split(__location__)[:-2]), 'skins')
+__skins_location__ = os.path.join(os.path.split(__location__)[-1], conf.section.skin_data_path)
 
 
 def skin_path_join(*elements):
