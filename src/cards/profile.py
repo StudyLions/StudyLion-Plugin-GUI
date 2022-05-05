@@ -603,9 +603,9 @@ class ProfileCard(Card):
     @classmethod
     async def sample_args(cls, ctx, **kwargs):
         return {
-            'name': ctx.author.name,
-            'discrim': '#' + ctx.author.discriminator,
-            'avatar': get_avatar_key(ctx.client, ctx.author.id),
+            'name': ctx.author.name if ctx else 'John Doe',
+            'discrim': ('#' + ctx.author.discriminator) if ctx else '#0000',
+            'avatar': get_avatar_key(ctx.client, ctx.author.id) if ctx else (0, None),
             'coins': 58596,
             'time': 3750 * 3600,
             'gems': 10000,

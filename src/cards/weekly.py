@@ -87,6 +87,8 @@ class WeeklyStatsSkin(Skin):
     weekdays: RawField = ('M', 'T', 'W', 'T', 'F', 'S', 'S')
 
     # Bottom
+    btm_bar_horiz_colour: ColourField = "#052B3B93"
+    btm_bar_vert_colour: ColourField = "#042231B2"
     btm_weekly_background_size: PointField = (66, 400)
     btm_weekly_background_colour: ColourField = '#06324880'
     btm_weekly_background: ComputedField = lambda skin: (
@@ -132,10 +134,6 @@ class WeeklyStatsSkin(Skin):
     btm_day_colour: ColourField = '#FFFFFF'
     btm_day_height: ComputedField = lambda skin: skin.btm_day_font.getsize('88')[1]
     btm_day_gap: NumberField = 15
-
-    btm_bar_horiz_colour: ColourField = "#052B3B93"
-    btm_bar_vert_colour: ColourField = "#042231B2"
-    btm_bar_weekday_colour: ColourField = "#F9CDB77F"
 
     btm_emoji_path: StringField = "weekly/emojis"
     btm_emojis: ComputedField = lambda skin: {
@@ -708,8 +706,8 @@ class WeeklyStatsCard(Card):
                 pointer += int(abs(random.normalvariate(2.5 * 60, 1 * 60)))
 
         return {
-            'name': ctx.author.name,
-            'discrim': '#' + ctx.author.discriminator,
+            'name': ctx.author.name if ctx else "John Doe",
+            'discrim': ('#' + ctx.author.discriminator) if ctx else "#0000",
             'sessions': sessions,
             'date': datetime.now(timezone.utc).replace(hour=0, minute=0, second=0)
         }

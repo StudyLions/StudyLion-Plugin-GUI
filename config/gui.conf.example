@@ -1,4 +1,4 @@
 [DEFAULT]
-skin_data_path = ../../skins/
-process_count = 20
+skin_data_path = ../skins/
+process_count = 10
 socket_path = gui.sock

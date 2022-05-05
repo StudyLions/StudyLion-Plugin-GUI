@@ -361,8 +361,8 @@ class TasklistCard(Card):
         from ..utils import get_avatar_key
 
         return {
-            'name': ctx.author.name,
-            'discrim': '#' + ctx.author.discriminator,
+            'name': ctx.author.name if ctx else "John Doe",
+            'discrim': '#' + ctx.author.discriminator if ctx else "#0000",
             'tasks': [
                 (0, 'Run 50km', True),
                 (1, 'Read 5 books', False),
@@ -374,7 +374,7 @@ class TasklistCard(Card):
                 (7, 'Pharetra vel turpis nunc eget lorem dolor', True)
             ],
             'date': datetime.datetime.now().replace(hour=0, minute=0, second=0),
-            'avatar': get_avatar_key(ctx.client, ctx.author.id),
+            'avatar': get_avatar_key(ctx.client, ctx.author.id) if ctx else (0, None),
             'badges': (
                 'STUDYING: MEDICINE',
                 'HOBBY: MATHS',

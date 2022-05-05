@@ -732,8 +732,8 @@ class MonthlyStatsCard(Card):
         longest_streak = max(streak, longest_streak)
 
         return {
-            'name': ctx.author.name,
-            'discrim': '#' + ctx.author.discriminator,
+            'name': ctx.author.name if ctx else "John Doe",
+            'discrim': ('#' + ctx.author.discriminator) if ctx else "#0000",
             'sessions': sessions,
             'date': datetime.now(timezone.utc).date(),
             'current_streak': streak,
