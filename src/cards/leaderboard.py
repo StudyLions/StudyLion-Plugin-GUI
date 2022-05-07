@@ -100,6 +100,7 @@ class LeaderboardSkin(Skin):
     # Entry constants
     entry_position_font: FontField = ("SemiBold", 45)
     entry_position_colour: ColourField = '#FFFFFF'
+    entry_position_highlight_colour: ColourField = '#FFFFFF'
     entry_name_font: FontField = ("SemiBold", 45)
     entry_name_colour: ColourField = '#FFFFFF'
     entry_hours_font: FontField = ("SemiBold", 45)
@@ -343,7 +344,7 @@ class LeaderboardPage(Layout):
         draw.text(
             (self.skin.entry_position_at, ypos),
             str(entry.position),
-            fill=self.skin.entry_position_colour,
+            fill=self.skin.entry_position_highlight_colour if highlight else self.skin.entry_position_colour,
             font=self.skin.entry_position_font,
             anchor='mm'
         )
