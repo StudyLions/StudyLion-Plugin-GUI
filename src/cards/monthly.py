@@ -125,6 +125,13 @@ class MonthlyStatsSkin(Skin):
 
     heatmap_mask: AssetField = 'monthly/heatmap_blob_mask.png'
     heatmap_empty_colour: ColourField = "#082534"
+    heatmap_empty_colour_override: ColourField = None
+    heatmap_empty: BlobField = FieldDesc(
+        BlobField,
+        mask_field='heatmap_mask',
+        colour_field='heatmap_empty_colour',
+        colour_field_override='heatmap_empty_colour_override'
+    )
     heatmap_colours: RawField = [
         '#0E2A77',
         '#15357D',
@@ -680,14 +687,15 @@ class MonthlyStatsPage(Layout):
     def draw_bubble(self, time):
         # Calculate colour level
         if time == 0:
+            image = self.skin.heatmap_empty
             colour = self.skin.heatmap_empty_colour
         else:
             amount = min(time / self.average_time, 2) / 2
             index = math.ceil(amount * len(self.skin.heatmap_colours)) - 1
             colour = self.skin.heatmap_colours[index]
 
-        image = Image.new('RGBA', self.skin.heatmap_mask.size)
-        image.paste(colour, mask=self.skin.heatmap_mask)
+            image = Image.new('RGBA', self.skin.heatmap_mask.size)
+            image.paste(colour, mask=self.skin.heatmap_mask)
         return image
 
 
