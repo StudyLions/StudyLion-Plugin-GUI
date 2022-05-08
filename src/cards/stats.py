@@ -302,7 +302,7 @@ class StatsLayout(Layout):
             (0, position),
             workout_text,
             font=self.skin.stats_subheader_font,
-            fill=self.skin.stats_subheader_colour if self.data_workouts else self.skin.stats_text_colour,
+            fill=self.skin.stats_subheader_colour,
             anchor='lm'
         )
         xposition = self.skin.stats_subheader_font.getlength(workout_text)
@@ -310,7 +310,7 @@ class StatsLayout(Layout):
             (xposition, position),
             str(self.data_workouts),
             font=self.skin.stats_text_font,
-            fill=self.skin.stats_subheader_colour if self.data_workouts else self.skin.stats_text_colour,
+            fill=self.skin.stats_subheader_colour,
             anchor='lm'
         )
 
