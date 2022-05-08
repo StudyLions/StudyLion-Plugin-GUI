@@ -61,7 +61,7 @@ class ProfileSkin(Skin):
         + 3 * skin.counter_background.height + 2 * skin.counter_gap
     )
 
-    column_sep: NumberField = 40
+    column_sep: NumberField = 20
 
     # Column 2
     subheader_font: FontField = ('Black', 27)
