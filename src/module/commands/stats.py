@@ -192,7 +192,7 @@ async def get_profile_card_for(ctx: Context, target):
         coins,
         season_time,
         avatar=avatar,
-        gems=0,
+        gems=ctx.client.data.gem_transactions.queries.get_gems_for(target.id),
         gifts=0,
         achievements=[i for i, ach in enumerate(achievements) if ach.level_id > 0],
         current_rank=current_rank,
