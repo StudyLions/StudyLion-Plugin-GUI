@@ -98,10 +98,14 @@ class GUITasklist(TextTasklist):
 
 
 # Monkey patch the Tasklist fetch method to conditionally point to the GUI tasklist
+# TODO: Config setting for text/gui
 @classmethod
-def fetch_or_create(cls, member, channel):
+def fetch_or_create(cls, ctx, flags, member, channel):
+    factory = TextTasklist if flags['text'] else GUITasklist
     tasklist = GUITasklist.active.get((member.id, channel.id), None)
-    return tasklist if tasklist is not None else GUITasklist(member, channel)
+    if type(tasklist) != factory:
+        tasklist = None
+    return tasklist if tasklist is not None else factory(member, channel)
 
 
 TextTasklist.fetch_or_create = fetch_or_create
