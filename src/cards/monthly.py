@@ -267,7 +267,7 @@ class MonthlyStatsPage(Layout):
             (date - first_session_start.date()).days,
             (date - self.months[0]).days
         ) + 1
-        self.average_time = sum(self.data_time.values()) / self.days_learned
+        self.average_time = sum(self.data_time.values()) / self.days_learned if self.days_learned else 0
 
         self.image = None
 
@@ -690,7 +690,7 @@ class MonthlyStatsPage(Layout):
             image = self.skin.heatmap_empty
             colour = self.skin.heatmap_empty_colour
         else:
-            amount = min(time / self.average_time, 2) / 2
+            amount = min(time / self.average_time if self.average_time else 0, 2) / 2
             index = math.ceil(amount * len(self.skin.heatmap_colours)) - 1
             colour = self.skin.heatmap_colours[index]
 
