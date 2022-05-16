@@ -92,5 +92,5 @@ class AppSkin:
         if skin_id is not None and skin_id in cls.skins_data["skin_map"]:
             path = cls.skins_data["skin_map"][skin_id]
             data_path = skin_path_join(path, 'skin.json')
-            if os.path.exists(path) and os.path.exists(data_path):
+            if os.path.exists(data_path):
                 return path
