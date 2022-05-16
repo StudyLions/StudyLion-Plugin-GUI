@@ -1,3 +1,4 @@
+import os
 import json
 from cachetools import TTLCache
 
@@ -49,6 +50,8 @@ class AppSkin:
         """
         Generator yielding all the available app skins.
         """
+        cls.skins_data = json.load(open(skin_path_join('skins.json'), 'r'))
+
         for skin_id in cls.skins_data['skin_map'].keys():
             yield cls(skin_id)
 
@@ -66,7 +69,7 @@ class AppSkin:
                 skin_path_join(self.skin_path, new_path)
             )
 
-        skin_props = self.skin_data['properties']
+        skin_props = self.skin_data.get('properties', {})
 
         if common_data := skin_props.get('common', None):
             data.update(common_data)
@@ -87,4 +90,7 @@ class AppSkin:
     @classmethod
     def get_skin_path(cls, skin_id):
         if skin_id is not None and skin_id in cls.skins_data["skin_map"]:
-            return cls.skins_data["skin_map"][skin_id]
+            path = cls.skins_data["skin_map"][skin_id]
+            data_path = skin_path_join(path, 'skin.json')
+            if os.path.exists(path) and os.path.exists(data_path):
+                return path
