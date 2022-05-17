@@ -405,7 +405,7 @@ class LeaderboardPage(Layout):
             (self.skin.header_text_size[0],
              self.skin.header_text_size[1] + self.skin.header_text_gap + self.skin.header_text_line_width
              + self.skin.header_text_line_gap
-             + self.skin.subheader_name_font.getsize("THIS MONTH")[1]),
+             + self.skin.subheader_name_font.getsize("THIS MONTHghjyp")[1]),
         )
         draw = ImageDraw.Draw(image)
         xpos, ypos = 0, 0
@@ -426,7 +426,7 @@ class LeaderboardPage(Layout):
         #     fill=self.skin.header_text_colour,
         #     width=self.skin.header_text_line_width
         # )
-        ypos += self.skin.header_text_line_gap
+        # ypos += self.skin.header_text_line_gap
 
         # Draw the subheader
         text_name = "SERVER: "
