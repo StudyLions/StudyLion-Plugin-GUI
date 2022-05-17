@@ -22,13 +22,20 @@ async def status(self):
     name = self.data.pretty_name
     remaining = int((stage.end - utc_now()).total_seconds())
     duration = int(stage.duration)
+    next_starts = int(stage.end.timestamp())
     users = [
         (get_avatar_key(client, member.id),
          session.duration if (session := Lion.fetch(member.guild.id, member.id).session) else 0,
          session.data.tag if session else None)
         for member in self.members
     ]
-    card_class = FocusTimerCard if (stage.name == 'FOCUS') else BreakTimerCard
+    if stage.name == 'FOCUS':
+        card_class = FocusTimerCard
+        content = f"**Focus!** Session ends <t:{next_starts}:R>."
+    else:
+        card_class = BreakTimerCard
+        content = f"**Have a rest!** Break finishes <t:{next_starts}:R>."
+
     page = await card_class.request(
         name,
         remaining,
@@ -37,7 +44,10 @@ async def status(self):
         skin=card_class.skin_args_for(guildid=self.data.guildid)
     )
 
-    return {'files': [image_as_file(page, name="timer.png")]}
+    return {
+        'content': content,
+        'files': [image_as_file(page, name="timer.png")]
+    }
 
 
 _guard_delay = 60
