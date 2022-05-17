@@ -6,6 +6,7 @@ from cmdClient.checks import in_guild
 import data
 from data import tables
 from utils.interactive import discord_shield
+from meta import conf
 
 from ...cards import LeaderboardCard
 from ...utils import image_as_file, edit_files, get_avatar_key
@@ -13,9 +14,9 @@ from ...utils import image_as_file, edit_files, get_avatar_key
 from ..module import module, ratelimit
 
 
-next_emoji = "▶"
-my_emoji = "👤"
-prev_emoji = "◀"
+next_emoji = conf.emojis.forward
+my_emoji = conf.emojis.person
+prev_emoji = conf.emojis.backward
 
 
 @module.cmd(
@@ -144,7 +145,7 @@ async def cmd_top(ctx):
 
         def reaction_check(reaction, user):
             result = reaction.message.id == out_msg.id
-            result = result and str(reaction.emoji) in [next_emoji, my_emoji, prev_emoji]
+            result = result and reaction.emoji in [next_emoji, my_emoji, prev_emoji]
             result = result and not (user.id == ctx.client.user.id)
             return result
 
