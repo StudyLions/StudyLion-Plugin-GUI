@@ -101,6 +101,8 @@ class LeaderboardSkin(Skin):
     entry_position_font: FontField = ("SemiBold", 45)
     entry_position_colour: ColourField = '#FFFFFF'
     entry_position_highlight_colour: ColourField = '#FFFFFF'
+    entry_name_highlight_colour: ColourField = '#FFFFFF'
+    entry_hours_highlight_colour: ColourField = '#FFFFFF'
     entry_name_font: FontField = ("SemiBold", 45)
     entry_name_colour: ColourField = '#FFFFFF'
     entry_hours_font: FontField = ("SemiBold", 45)
@@ -353,7 +355,7 @@ class LeaderboardPage(Layout):
         draw.text(
             (self.skin.entry_name_at, ypos),
             entry.name,
-            fill=self.skin.entry_name_colour,
+            fill=self.skin.entry_name_highlight_colour if highlight else self.skin.entry_name_colour,
             font=self.skin.entry_name_font,
             anchor='lm'
         )
@@ -366,7 +368,7 @@ class LeaderboardPage(Layout):
         draw.text(
             (image.width + self.skin.entry_time_at, ypos),
             time_str,
-            fill=self.skin.entry_hours_colour,
+            fill=self.skin.entry_hours_highlight_colour if highlight else self.skin.entry_hours_colour,
             font=self.skin.entry_hours_font,
             anchor='mm'
         )
