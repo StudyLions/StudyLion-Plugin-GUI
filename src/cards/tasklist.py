@@ -278,6 +278,10 @@ class TasklistLayout(Layout, MiniProfileLayout):
         font = self.skin.task_done_text_font if done else self.skin.task_undone_text_font
         colour = self.skin.task_done_text_colour if done else self.skin.task_undone_text_colour
 
+        # Handle empty tasks
+        if not task.strip():
+            task = '~'
+
         # First breakup the text
         lines = []
         line = []
