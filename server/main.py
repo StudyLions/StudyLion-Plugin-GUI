@@ -2,7 +2,7 @@ import time
 import asyncio
 import pickle
 import logging
-import uuid
+import string
 import multiprocessing
 from contextvars import ContextVar, copy_context
 from concurrent.futures import ProcessPoolExecutor
@@ -23,8 +23,10 @@ MAX_PROC = conf.gui.getint('process_count')
 executor: ProcessPoolExecutor = None
 
 
+uuid_alphabet = string.ascii_lowercase + string.digits
+
 def short_uuid():
-    return ''.join(random.choices(uuid.alphabet, k=10))
+    return ''.join(random.choices(uuid_alphabet, k=10))
 
 
 async def handle_request(reader, writer):
@@ -66,12 +68,14 @@ async def handle_request(reader, writer):
         await writer.wait_closed()
 
 
-def _execute(context, method, args, kwargs):
+def _execute(ctx, method, args, kwargs):
+    requestid.set(ctx[0])
+    log_context.set(ctx[1])
+    log_action_stack.set(ctx[2])
     try:
-        return context.run(method, *args, **kwargs)
+        return method(*args, **kwargs)
     except Exception:
-        context.run(
-            logging.exception,
+        logging.exception(
             "Uncaught exception executing route:",
             exc_info=True,
             stack_info=True
@@ -87,7 +91,7 @@ async def runner(method, args, kwargs):
     return await asyncio.get_event_loop().run_in_executor(
         executor,
         _execute,
-        copy_context(),
+        (requestid.get(), log_context.get(), log_action_stack.get()),
         method,
         args,
         kwargs

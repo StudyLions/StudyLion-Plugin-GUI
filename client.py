@@ -1,7 +1,6 @@
 import asyncio
 import pickle
 import time
-import os
 import logging
 
 from meta import conf
