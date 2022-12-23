@@ -1,13 +1,34 @@
+"""
+Thread and multi-process aware logging.
+
+Creates a single thread dedicated to logging.
+Provides a setup method for new processes.
+"""
+
 import sys
 import logging
+import queue
 from logging.handlers import QueueHandler
-import contextvars
+
+from meta.logger import log_fmt, ContextInjection, LessThanFilter
 
 
-requestid = contextvars.ContextVar('requestid')
+def setup_worker_logging(queue: queue.Queue):
+    qh = QueueHandler(queue)
+    qh.addFilter(ContextInjection())
+    root = logging.getLogger()
+    ...
 
 
-def logger_thread(queue):
+def _logging_thread(queue: queue.Queue):
+    ...
+
+
+def start_logging_thread(queue: queue.Queue):
+    ...
+
+
+def logger_thread(queue: queue.Queue):
     while True:
         record = queue.get()
         if record is None:
@@ -16,17 +37,11 @@ def logger_thread(queue):
         logger.handle(record)
 
 
-def worker_logger(queue):
+def worker_logger(queue: queue.Queue):
     h = QueueHandler(queue)  # Just the one handler needed
     root = logging.getLogger()
     root.addHandler(h)
     root.setLevel(logging.DEBUG)
-
-
-class RequestFilter(logging.Filter):
-    def filter(self, record):
-        record.requestid = requestid.get(f"{'GLOBAL':^36}")
-        return record
 
 
 logger = logging.getLogger()

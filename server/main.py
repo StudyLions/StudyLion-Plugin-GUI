@@ -3,66 +3,75 @@ import asyncio
 import pickle
 import logging
 import uuid
-# import threading
 import multiprocessing
+from contextvars import ContextVar, copy_context
 from concurrent.futures import ProcessPoolExecutor
+import random
 
-from ..config import conf
+from meta.logger import log_app, logging_context, log_context, log_action_stack
+from meta.config import conf
+
 from ..routes import routes
-from .logger import requestid
+
+requestid = ContextVar('requestid', default=None)
 
 
 # TODO: General error handling, logging, and return paths for exceptions/null data
-PATH = conf.section.socket_path
-MAX_PROC = conf.section.getint('process_count')
+PATH = conf.gui.get('socket_path')
+MAX_PROC = conf.gui.getint('process_count')
 
 executor: ProcessPoolExecutor = None
 
 
-async def handle_request(reader, writer):
-    rqid = uuid.uuid4()
-    requestid.set(rqid)
+def short_uuid():
+    return ''.join(random.choices(uuid.alphabet, k=10))
 
+
+async def handle_request(reader, writer):
     data = await reader.read()
     route, args, kwargs = pickle.loads(data)
-    logging.info(f"Received rendering request for route {route!r}")
-    logging.debug(f"Request args: {args!r}")
-    logging.debug(f"Request kwargs: {kwargs!r}")
+    rqid = short_uuid()
+    requestid.set(rqid)
 
-    if route in routes:
-        start = time.time()
-        try:
-            response = await routes[route](runner, args, kwargs)
-        except Exception:
-            end = time.time()
-            logging.error(
-                f"Rendering request completed with an exception in {end-start:.6f} seconds.",
-                exc_info=True
-            )
-            response = b''
+    with logging_context(context=f"RQID: {rqid}", action=f"ROUTE {route}"):
+        logging.debug(
+            f"Handling rendering request on route {route!r} with args {args!r} and kwargs {kwargs!r}"
+        )
+
+        if route in routes:
+            start = time.time()
+            try:
+                response = await routes[route](runner, args, kwargs)
+            except Exception:
+                end = time.time()
+                logging.error(
+                    f"Rendering request completed with an exception in {end-start:.6f} seconds.",
+                    exc_info=True
+                )
+                response = b''
+            else:
+                end = time.time()
+                logging.debug(f"Rendering request complete in {end-start:.6f} seconds.")
         else:
-            end = time.time()
-            logging.info(f"Rendering request complete in {end-start:.6f} seconds.")
-    else:
-        logging.warning(f"Unhandled route requested {route!r}")
-        response = b''
+            logging.warning(f"Unhandled route requested {route!r}")
+            response = b''
 
-    logging.debug(f"Response is {len(response)} bytes")
-    writer.write(response)
-    writer.write_eof()
+        logging.debug(f"Response is {len(response)} bytes")
+        writer.write(response)
+        writer.write_eof()
 
-    await writer.drain()
+        await writer.drain()
 
-    writer.close()
-    await writer.wait_closed()
+        writer.close()
+        await writer.wait_closed()
 
 
-def _execute(rqid, method, args, kwargs):
+def _execute(context, method, args, kwargs):
     try:
-        requestid.set(rqid)
-        return method(*args, **kwargs)
+        return context.run(method, *args, **kwargs)
     except Exception:
-        logging.error(
+        context.run(
+            logging.exception,
             "Uncaught exception executing route:",
             exc_info=True,
             stack_info=True
@@ -78,7 +87,7 @@ async def runner(method, args, kwargs):
     return await asyncio.get_event_loop().run_in_executor(
         executor,
         _execute,
-        requestid.get(),
+        copy_context(),
         method,
         args,
         kwargs
@@ -86,7 +95,12 @@ async def runner(method, args, kwargs):
 
 
 def worker_configurer():
-    logging.info(f"Launching new pool process: {multiprocessing.current_process().name}.")
+    name = multiprocessing.current_process().name
+    _, _, n = name.partition('-')
+    log_app.set(f"GUI_SERVER-{n}")
+    log_context.set(f"PROC: {name}")
+    log_action_stack.set([name])
+    logging.info(f"Launching new pool process: {name}.")
 
 
 async def main():
@@ -94,16 +108,20 @@ async def main():
     # threading.Thread(target=logger_thread, args=(logging_queue,)).start()
 
     global executor
-    executor = ProcessPoolExecutor(MAX_PROC, initializer=worker_configurer)
-    for i in range(MAX_PROC):
-        executor.submit(worker_configurer)
+    log_app.set("GUI_SERVER")
 
-    server = await asyncio.start_unix_server(handle_request, PATH)
-    addrs = ', '.join(str(sock.getsockname()) for sock in server.sockets)
-    logging.info(f'Serving on sockets: {addrs}')
+    with logging_context(action='SPAWN'):
+        executor = ProcessPoolExecutor(MAX_PROC)
+        for i in range(MAX_PROC):
+            executor.submit(worker_configurer)
 
-    async with server:
-        await server.serve_forever()
+    with logging_context(stack=["SERV"]):
+        server = await asyncio.start_unix_server(handle_request, PATH)
+        addrs = ', '.join(str(sock.getsockname()) for sock in server.sockets)
+        logging.info(f'Serving on socket: {addrs}')
+
+        async with server:
+            await server.serve_forever()
 
 
 if __name__ == '__main__':
