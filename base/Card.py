@@ -3,10 +3,14 @@ import gc
 from contextlib import closing
 import logging
 
+from babel.translator import ctx_locale
+
 from ..utils import image_as_file
 from ..client import request
 from .Layout import Layout
 from .Skin import Skin
+
+logger = logging.getLogger(__name__)
 
 
 class Card:
@@ -23,6 +27,21 @@ class Card:
     skin: Skin = None
 
     # Abstract base class for a drawable Card
+
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+        self.result = None
+
+    async def render(self):
+        self.result = await self.request(*self.args, **self.kwargs)
+        return self.result
+
+    def as_file(self, filename: str):
+        if not self.result:
+            raise ValueError("Cannot convert before rendering.")
+        return image_as_file(self.result, filename)
+
     @classmethod
     async def request(cls, *args, **kwargs):
         """
@@ -30,6 +49,7 @@ class Card:
         By default, forwards the request straight to the rendering server.
         It may be useful to perform pre-request processing on the arguments.
         """
+        kwargs.setdefault('locale', ctx_locale.get())
         if os.name == 'nt':
             async def runner(method, args, kwargs):
                 return method(*args, **kwargs)
@@ -51,24 +71,18 @@ class Card:
         Synchronous method to execute inside the forked child.
         Should return the drawn card as a raw BytesIO object.
         """
-        try:
-            with closing(cls.skin(cls.card_id, **kwargs.pop('skin', {}))) as skin:
-                # TODO: Consider caching/preloading skins in parent?
-                skin.load()
-                with closing(cls.layout(skin, *args, **kwargs)) as card:
-                    response = card._execute_draw()
+        locale = kwargs['locale']
+        ctx_locale.set(locale)
+        with closing(cls.skin(cls.card_id, locale=locale, **kwargs.pop('skin', {}))) as skin:
+            # TODO: Consider caching/preloading skins in parent?
+            skin.load()
+            with closing(cls.layout(skin, *args, **kwargs)) as card:
+                response = card._execute_draw()
 
-            del card
-            gc.collect()
+        del card
+        gc.collect()
 
-            return response
-        except Exception:
-            logging.error(
-                f"Exception occurred rendering card {cls.card_id}:",
-                exc_info=True,
-                stack_info=True
-            )
-            return b''
+        return response
 
     @classmethod
     def skin_args_for(cls, userid=None, guildid=None, **kwargs):

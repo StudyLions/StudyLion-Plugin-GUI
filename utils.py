@@ -1,11 +1,21 @@
 import io
 import os
 import discord
+from enum import IntEnum
 import logging
 
 from PIL import ImageFont
 
 from meta import conf
+
+logger = logging.getLogger(__name__)
+
+
+class RequestState(IntEnum):
+    SUCCESS = 0
+    UNKNOWN_ROUTE = 1
+    SYSTEM_ERROR = 2
+    RENDER_ERROR = 3
 
 
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
@@ -30,7 +40,7 @@ def resolve_asset_path(PATH, asset_path):
         try_path = os.path.join(path, asset_path)
         if os.path.exists(try_path):
             return try_path
-    logging.error(
+    logger.error(
         f"Could not resolve asset path '{asset_path}' in PATH: '{PATH}'"
     )
 
@@ -38,7 +48,14 @@ def resolve_asset_path(PATH, asset_path):
 
 
 def inter_font(name, **kwargs):
-    return ImageFont.truetype(asset_path('Inter/static/Inter-{}.ttf'.format(name)), **kwargs)
+    return get_font('Inter', name, **kwargs)
+
+
+def get_font(family, name, **kwargs):
+    return ImageFont.truetype(
+        asset_path(f"fonts/{family}/{family}-{name}.ttf"),
+        **kwargs
+    )
 
 
 def image_as_file(image, name):

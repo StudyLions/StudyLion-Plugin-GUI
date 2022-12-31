@@ -41,6 +41,8 @@ class StatsSkin(Skin):
         'scale': 2  # General size scale to match background resolution
     }
 
+    font_family: RawField = 'Inter'
+
     # Background images
     background: AssetField = "stats/background.png"
 
@@ -56,18 +58,27 @@ class StatsSkin(Skin):
 
     # First column
     col1_header: StringField = 'STATISTICS'
+    col1_header_height: ComputedField = lambda skin: skin.header_font.getsize(skin.col1_header)[1]
+    stats_subheader_leaderboard: StringField = 'LEADERBOARD POSITION'
+    stats_subheader_study: StringField = 'STUDY TIME'
+    stats_subheader_workouts: StringField = 'WORKOUTS'
     stats_subheader_pregap: NumberField = 8
     stats_subheader_font: FontField = ('Black', 21)
     stats_subheader_colour: ColourField = '#FFFFFF'
-    stats_subheader_size: ComputedField = lambda skin: skin.stats_subheader_font.getsize('LEADERBOARD POSITION')
+    stats_subheader_size: ComputedField = lambda skin: (
+        skin.stats_subheader_font.getsize(skin.stats_subheader_leaderboard)
+    )
     stats_text_gap: NumberField = 13  # Gap between stat lines
     stats_text_font: FontField = ('SemiBold', 19)
-    stats_text_height: ComputedField = lambda skin: skin.stats_text_font.getsize('DAILY')[1]
+    stats_text_daily: StringField = 'DAILY'
+    stats_text_weekly: StringField = 'WEEKLY'
+    stats_text_monthly: StringField = 'MONTHLY'
+    stats_text_height: ComputedField = lambda skin: skin.stats_text_font.getsize(skin.stats_text_daily)[1]
     stats_text_colour: ColourField = '#BABABA'
 
     col1_size: ComputedField = lambda skin: (
         skin.stats_subheader_size[0],
-        skin.header_height + skin.header_gap
+        skin.col1_header_height + skin.header_gap
         + 3 * skin.stats_subheader_size[1]
         + 2 * skin.stats_subheader_pregap
         + 6 * skin.stats_text_height
@@ -145,7 +156,7 @@ class StatsSkin(Skin):
 
 class StatsLayout(Layout):
     def __init__(self, skin, lb_data, time_data, workouts, streak_data, date=None, draft=False, **kwargs):
-        self.draft = draft
+        self.draft = True
 
         self.skin = skin
 

@@ -2,8 +2,10 @@ import time
 import logging
 
 from PIL import Image, ImageColor
-from ..utils import inter_font, resolve_asset_path
+from ..utils import resolve_asset_path, get_font
 from .AppSkin import AppSkin
+
+logger = logging.getLogger(__name__)
 
 
 class Field:
@@ -184,15 +186,20 @@ class FontField(Field):
     Expected data: tuple of (font_name, font_size)
     TODO: Allow different font class?
     """
-    __slots__ = ('scale',)
+    __slots__ = ('scale', 'skin')
 
-    def __init__(self, scale=1, **kwargs):
+    def __init__(self, scale=1, skin=None, **kwargs):
         self.scale = scale
+        self.skin = skin
         super().__init__(**kwargs)
 
     def load(self):
-        name, size = self.data
-        self.value = inter_font(name, size=int(self.scale * size))
+        if len(self.data) == 2:
+            name, size = self.data
+            family = self.skin.font_family
+        elif len(self, self.data) == 3:
+            name, size, family = self.data
+        self.value = get_font(family, name, size=int(self.scale * size))
         return self
 
 
@@ -241,10 +248,13 @@ class Skin:
     _env = {
     }
 
-    def __init__(self, card_id, base_skin_id=None, **kwargs):
+    # Default family for font fields on this skin
+    font_family: RawField = 'Inter'
+
+    def __init__(self, card_id, base_skin_id=None, locale=None, **kwargs):
         self.card_id = card_id
 
-        self.base = AppSkin.get(base_skin_id).for_card(self.card_id)
+        self.base = AppSkin.get(base_skin_id, locale=locale).for_card(self.card_id)
         self.overwrites = {**self.base, **kwargs}
         self.fields = None
 
@@ -296,7 +306,7 @@ class Skin:
             # last = now
         self._setup()
         end = time.time()
-        logging.debug(f"Skin loading took {end-start} seconds")
+        logger.debug(f"Skin loading took {end-start} seconds")
         return self
 
     def _setup(self):

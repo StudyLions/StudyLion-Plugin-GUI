@@ -6,6 +6,10 @@ import logging
 from meta import conf
 from meta.logger import logging_context
 
+from .utils import RequestState
+
+logger = logging.getLogger(__name__)
+
 socket_path = conf.gui.get('socket_path')
 
 
@@ -17,7 +21,7 @@ class EmptyResponse(ValueError):
 
 async def request(route, args=(), kwargs={}):
     with logging_context(action=f"Render {route}"):
-        logging.debug(
+        logger.debug(
             f"Sending rendering request to route {route!r} with args {args!r} and kwargs {kwargs!r}"
         )
         now = time.time()
@@ -30,16 +34,24 @@ async def request(route, args=(), kwargs={}):
         writer.write_eof()
 
         data = await reader.read(-1)
-
-        end = time.time()
-        logging.debug(
-            f"Round-trip rendering took {end-now:.6f} seconds"
-        )
+        result = pickle.loads(data)
 
         await writer.drain()
         writer.close()
 
-        if data == b'':
-            raise EmptyResponse
+        end = time.time()
 
-        return data
+        if not result or not result['rqid']:
+            logger.error(f"Rendering server sent a malformed response: {result}")
+            raise EmptyResponse
+        elif result['state'] != RequestState.SUCCESS:
+            logger.error(
+                f"Rendering failed! Response: {result}"
+            )
+            raise EmptyResponse
+        else:
+            image_data = result.pop('data')
+            logger.debug(
+                f"Rendering completed in {end-now:.6f} seconds. Response: {result}"
+            )
+            return image_data

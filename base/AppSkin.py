@@ -1,3 +1,4 @@
+from typing import Optional
 import os
 import json
 from cachetools import TTLCache
@@ -5,20 +6,29 @@ from cachetools import TTLCache
 from ..utils import skin_path_join
 
 
+def merge_into(base, overwrites):
+    for k, v in overwrites.items():
+        if isinstance(v, dict) and k in base:
+            merge_into(base[k], v)
+        else:
+            base[k] = v
+
+
 class AppSkin:
     skins_data = json.load(open(skin_path_join('skins.json'), 'r'))
     gui_skin_cache = TTLCache(1024, ttl=60)
 
-    def __init__(self, skin_id):
+    def __init__(self, skin_id, locale=None):
         # Global skin text identifier
         self.skin_id = skin_id
+        self.locale = locale
 
         # Relative skin path
         self.skin_path = self.get_skin_path(skin_id) or self.get_skin_path(self.skins_data['fallback'])
 
         # Configuration data for this skin
-        self.skin_data = json.load(open(skin_path_join(self.skin_path, 'skin.json'), 'r'))
-        self.parents = [AppSkin.get(skin_id) for skin_id in self.skin_data.get('parents', [])]
+        self.skin_data = self._skin_data_at(self.skin_path, locale=locale)
+        self.parents = [AppSkin.get(skin_id, locale) for skin_id in self.skin_data.get('parents', [])]
 
         self.display_name = self.skin_data.get('display_name', "Unnamed")
         self.description = self.skin_data.get('description', "No Description")
@@ -37,11 +47,24 @@ class AppSkin:
             self.user_whitelist = None
 
     @classmethod
-    def get(cls, skin_id, use_cache=True):
+    def _skin_data_at(cls, skin_path: str, locale: Optional[str] = None) -> dict:
+        """
+        Retrieve skin data from the given path, respecting localisation overwrites.
+        """
+        data = json.load(open(skin_path_join(skin_path, 'skin.json'), 'r'))
+        if locale:
+            locale_path = skin_path_join(skin_path, f"skin_{locale}.json")
+            if os.path.exists(locale_path):
+                locale_data = json.load(open(locale_path, 'r'))
+                merge_into(data, locale_data)
+        return data
+
+    @classmethod
+    def get(cls, skin_id, locale=None, use_cache=True):
         if use_cache and skin_id in cls.gui_skin_cache:
-            appskin = cls.gui_skin_cache[skin_id]
+            appskin = cls.gui_skin_cache[(skin_id, locale)]
         else:
-            appskin = cls.gui_skin_cache[skin_id] = cls(skin_id)
+            appskin = cls.gui_skin_cache[(skin_id, locale)] = cls(skin_id, locale=locale)
 
         return appskin
 
