@@ -5,6 +5,8 @@ from PIL import Image, ImageColor
 from ..utils import resolve_asset_path, get_font
 from .AppSkin import AppSkin
 
+from babel.translator import ctx_translator
+
 logger = logging.getLogger(__name__)
 
 
@@ -156,6 +158,24 @@ class StringField(RawField):
     """
     __slots__ = ()
     _default = ""
+
+
+class LazyStringField(Field):
+    """
+    Expected data: LazyString
+    String will be translated on load.
+    """
+    __slots__ = ('skin',)
+
+    def __init__(self, skin=None, **kwargs):
+        self.skin = skin
+
+        super().__init__(**kwargs)
+
+    def load(self):
+        t = ctx_translator.get().t
+        self.value = t(self.data)
+        return self
 
 
 class NumberField(Field):

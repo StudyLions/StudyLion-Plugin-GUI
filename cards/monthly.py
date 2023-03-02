@@ -1,16 +1,24 @@
 import math
 import calendar
+import logging
 from collections import defaultdict
+import pytz
 from PIL import Image, ImageDraw
-from datetime import timedelta
-import datetime
+from datetime import timedelta, datetime, timezone
 
-from ..base import Card, Layout, fielded, Skin
+from babel.translator import LocalBabel
+from babel.utils import local_month
+
+from ..base import Card, Layout, fielded, Skin, CardMode
 from ..base.Skin import (
     FieldDesc,
     AssetField, RGBAAssetField, BlobField, StringField, NumberField, RawField,
-    FontField, ColourField, PointField, ComputedField
+    FontField, ColourField, PointField, ComputedField, LazyStringField
 )
+
+logger = logging.getLogger(__name__)
+babel = LocalBabel('monthly-gui')
+_p, _np = babel._p, babel._np
 
 
 @fielded
@@ -19,13 +27,38 @@ class MonthlyStatsSkin(Skin):
         'scale': 2  # General size scale to match background resolution
     }
 
+    mode: RawField = CardMode.TEXT
+
     background: AssetField = 'monthly/background.png'
 
     # Header
     title_pre_gap: NumberField = 40
-    title_text: StringField = "STUDY HOURS"
+
+    study_title_text: LazyStringField = _p(
+        'skin:monthlystats|mode:study|title',
+        "STUDY HOURS"
+    )
+    voice_title_text: LazyStringField = _p(
+        'skin:monthlystats|mode:voice|title',
+        "VOICE CHANNEL ACTIVITY"
+    )
+    text_title_text: LazyStringField = _p(
+        'skin:monthlystats|mode:text|title',
+        "MESSAGE ACTIVITY"
+    )
+    anki_title_text: LazyStringField = _p(
+        'skin::monthlystats|mode:anki|title',
+        "CARDS REVIEWED"
+    )
+    title_text: ComputedField = lambda skin: {
+        CardMode.STUDY: skin.study_title_text,
+        CardMode.VOICE: skin.voice_title_text,
+        CardMode.TEXT: skin.text_title_text,
+        CardMode.ANKI: skin.anki_title_text,
+    }[skin.mode]
     title_font: FontField = ('ExtraBold', 76)
-    title_size: ComputedField = lambda skin: skin.title_font.getsize(skin.title_text)
+    title_size: ComputedField = lambda skin: skin.title_font.getbbox(skin.title_text)[2:]
+
     title_colour: ColourField = '#DDB21D'
     title_underline_gap: NumberField = 10
     title_underline_width: NumberField = 0
@@ -56,7 +89,7 @@ class MonthlyStatsSkin(Skin):
     top_date_pre_gap: NumberField = 20
     top_date_font: FontField = ('Light', 25)
     top_date_colour: ColourField = '#FFFFFF'
-    top_date_height: ComputedField = lambda skin: skin.top_date_font.getsize('31')[1]
+    top_date_height: ComputedField = lambda skin: skin.top_date_font.getbbox('31')[-1]
 
     top_bar_mask: RGBAAssetField = 'monthly/bar_mask.png'
 
@@ -80,6 +113,29 @@ class MonthlyStatsSkin(Skin):
         colour_field_override='top_last_colour_override'
     )
 
+    study_top_hours_text: LazyStringField = _p(
+        'ui:monthlystats|mode:study|bar_value',
+        "{value} H"
+    )
+    voice_top_hours_text: LazyStringField = _p(
+        'ui:monthlystats|mode:voice|bar_value',
+        "{value} H"
+    )
+    text_top_hours_text: LazyStringField = _p(
+        'ui:monthlystats|mode:text|bar_value',
+        "{value} M"
+    )
+    anki_top_hours_text: LazyStringField = _p(
+        'ui:monthlystats|mode:anki|bar_value',
+        "{value} C"
+    )
+    top_hours_text: ComputedField = lambda skin: {
+        CardMode.STUDY: skin.study_top_hours_text,
+        CardMode.VOICE: skin.voice_top_hours_text,
+        CardMode.TEXT: skin.text_top_hours_text,
+        CardMode.ANKI: skin.anki_top_hours_text,
+    }[skin.mode]
+
     top_this_hours_font: FontField = ('Medium', 20)
     top_this_hours_colour: ColourField = '#DDB21D'
 
@@ -91,12 +147,39 @@ class MonthlyStatsSkin(Skin):
 
     top_gap: NumberField = 40
 
-    weekdays: RawField = ('M', 'T', 'W', 'T', 'F', 'S', 'S')
+    weekdays_text: LazyStringField = _p(
+        'skin:monthlystats|weekdays',
+        "M,T,W,T,F,S,S"
+    )
+    weekdays: ComputedField = lambda skin: skin.weekdays_text.split(',')
 
     # Summary
     summary_pre_gap: NumberField = 50
-
     summary_mask: AssetField = 'monthly/summary_mask.png'
+
+    study_this_month_text: LazyStringField = _p(
+        'skin:monthlystats|mode:study|summary:this_month',
+        "THIS MONTH: {amount} HOURS"
+    )
+    voice_this_month_text: LazyStringField = _p(
+        'skin:monthlystats|mode:voice|summary:this_month',
+        "THIS MONTH: {amount} HOURS"
+    )
+    text_this_month_text: LazyStringField = _p(
+        'skin:monthlystats|mode:text|summary:this_month',
+        "THIS MONTH: {amount} MESSAGES"
+    )
+    anki_this_month_text: LazyStringField = _p(
+        'skin:monthlystats|mode:text|summary:this_month',
+        "THIS MONTH: {amount} CARDS"
+    )
+    this_month_text: ComputedField = lambda skin: {
+        CardMode.STUDY: skin.study_this_month_text,
+        CardMode.VOICE: skin.voice_this_month_text,
+        CardMode.TEXT: skin.text_this_month_text,
+        CardMode.ANKI: skin.anki_this_month_text,
+    }[skin.mode]
+
     this_month_image: BlobField = FieldDesc(
         BlobField,
         mask_field='summary_mask',
@@ -108,6 +191,28 @@ class MonthlyStatsSkin(Skin):
 
     summary_sep: NumberField = 300
 
+    study_last_month_text: LazyStringField = _p(
+        'skin:monthlystats|mode:study|summary:last_month',
+        "LAST MONTH: {amount} HOURS"
+    )
+    voice_last_month_text: LazyStringField = _p(
+        'skin:monthlystats|mode:voice|summary:last_month',
+        "LAST MONTH: {amount} HOURS"
+    )
+    text_last_month_text: LazyStringField = _p(
+        'skin:monthlystats|mode:text|summary:last_month',
+        "LAST MONTH: {amount} MESSAGES"
+    )
+    anki_last_month_text: LazyStringField = _p(
+        'skin:monthlystats|mode:text|summary:last_month',
+        "LAST MONTH: {amount} CARDS"
+    )
+    last_month_text: ComputedField = lambda skin: {
+        CardMode.STUDY: skin.study_last_month_text,
+        CardMode.VOICE: skin.voice_last_month_text,
+        CardMode.TEXT: skin.text_last_month_text,
+        CardMode.ANKI: skin.anki_last_month_text,
+    }[skin.mode]
     last_month_font: FontField = ('Light', 23)
     last_month_colour: ColourField = '#BABABA'
     last_month_image: BlobField = FieldDesc(
@@ -189,6 +294,38 @@ class MonthlyStatsSkin(Skin):
     btm_grid_y: ComputedField = lambda skin: skin.btm_grid_x
 
     # Stats
+    current_streak_key_text: LazyStringField = _p(
+        'ui:monthlystats|stats:current_streak|key',
+        "Current Streak:"
+    )
+    current_streak_value_text: LazyStringField = _p(
+        'ui:monthlystats|stats:current_streak|value',
+        "{count} days"
+    )
+    longest_streak_key_text: LazyStringField = _p(
+        'ui:monthlystats|stats:longest_streak|key',
+        "Longest Streak:"
+    )
+    longest_streak_value_text: LazyStringField = _p(
+        'ui:monthlystats|stats:longest_streak|value',
+        "{count} days"
+    )
+    daily_average_key_text: LazyStringField = _p(
+        'ui:monthlystats|stats:daily_average|key',
+        "Daily Average:"
+    )
+    daily_average_value_text: LazyStringField = _p(
+        'ui:monthlystats|stats:daily_average|value',
+        "{count} hours"
+    )
+    days_active_key_text: LazyStringField = _p(
+        'ui:monthlystats|stats:days_active|key',
+        "Days Active:"
+    )
+    days_active_value_text: LazyStringField = _p(
+        'ui:monthlystats|stats:days_active|value',
+        "{count} days"
+    )
     stats_key_font: FontField = ('Medium', 23.65)
     stats_key_colour: ColourField = '#FFFFFF'
     stats_value_font: FontField = ('Light', 23.65)
@@ -198,77 +335,85 @@ class MonthlyStatsSkin(Skin):
     )
 
     # Date text
+    footer_text: LazyStringField = _p(
+        'skin:monthlystats|footer',
+        "Monthly Statistics • As of {day} {month} • {name} {discrim}"
+    )
     footer_font: FontField = ('Bold', 28)
     footer_colour: ColourField = '#6f6e6f'
     footer_gap: NumberField = 50
 
 
-# TODO: Month hour bars.. Blobasset full bars and use them as masks, e.g. profile progress bar.
-
 class MonthlyStatsPage(Layout):
-    def __init__(self, skin, name, discrim, sessions, date, current_streak, longest_streak, first_session_start):
+    def __init__(
+        self,
+        skin: MonthlyStatsSkin,
+        user: tuple[str, str], timezone: str,
+        now: int, month: int,
+        monthly: list[list[float]],
+        current_streak: int, longest_streak: int,
+        **kwargs
+    ):
         """
-        `sessions` is a list of study sessions from the last two weeks.
+        Parameters
+        ----------
+        skin: MonthlyStatsSkin
+        user: tuple[str, str]
+            Name and discriminator of the user who owns this card.
+        timezone: str
+            A valid pytz timezone to localise the timestamps.
+        now: int
+            The UTC timestamp at which the data was calculated.
+        month: int
+            The UTC timestamp of the start of the (local) week.
+        monthly: list[list[float]]
+            A list of day activity totals for the last 4 months (inclusive of the current month).
+        current_streak: int
+            The user's current activity streak.
+            (Provided as an argument in case the current streak is longer than the provided daily data.)
+        longest_streak: int
+            The user's all-time activity streak.
         """
         self.skin = skin
 
-        self.data_sessions = sessions
-        self.data_date = date
+        # The provided raw data
+        self.data_name, self.data_discrim = user
+        self.data_timezone = timezone
+        self.data_now = now
+        self.data_month = month
+        self.data_monthly = monthly
+        self.data_current_streak = current_streak
+        self.data_longest_streak = longest_streak
 
-        self.data_name = name
-        self.data_discrim = discrim
+        # Computed data
+        self.timezone = pytz.timezone(timezone)
+        self.now = datetime.utcfromtimestamp(now).replace(tzinfo=pytz.utc).astimezone(self.timezone)
+        self.month_start = datetime.utcfromtimestamp(month).replace(tzinfo=pytz.utc).astimezone(self.timezone)
 
-        self.current_streak = current_streak
-        self.longest_streak = longest_streak
-
-        self.month_start = date.replace(day=1)
-
-        self.data_time = defaultdict(int)
-
-        for start, end in sessions:
-            day_start = start.replace(hour=0, minute=0, second=0, microsecond=0)
-            day_end = day_start + timedelta(hours=24)
-
-            if end > day_end:
-                self.data_time[day_start.date()] += (day_end - start).total_seconds()
-                self.data_time[day_end.date()] += (end - day_end).total_seconds()
-            else:
-                self.data_time[day_start.date()] += (end - start).total_seconds()
-
-        self.this_month_days = calendar.monthrange(self.month_start.year, self.month_start.month)[1]
-        self.hours_this_month = [
-            self.data_time[self.month_start + timedelta(days=i)] / 3600
-            for i in range(0, self.this_month_days)
-        ]
+        self.this_month = self.data_monthly[-1]
+        self.last_month = self.data_monthly[-2]
 
         self.months = [self.month_start]
         for i in range(0, 3):
             self.months.append((self.months[-1] - timedelta(days=1)).replace(day=1))
-
         self.months.reverse()
 
-        last_month_start = self.months[-2]
-        last_month_days = calendar.monthrange(last_month_start.year, last_month_start.month)[1]
-        self.hours_last_month = [
-            self.data_time[last_month_start + timedelta(days=i)] / 3600
-            for i in range(0, last_month_days)
-        ][:self.this_month_days]  # Truncate to this month length
-
-        max_hours = max(*self.hours_this_month, *self.hours_last_month)
-
+        max_hours = max(*self.this_month, *self.last_month)
         self.max_hour_label = (4 * math.ceil(max_hours / 4)) or 4
+        self.max_day_label = max(len(self.this_month), len(self.last_month))
 
-        self.days_learned = sum(val != 0 for val in self.data_time.values())
-        self.total_days = sum(
-            calendar.monthrange(month.year, month.month)[1]
-            for month in self.months
-        )
-        self.days_since_start = min(
-            (date - first_session_start.date()).days,
-            (date - self.months[0]).days
-        ) + 1
-        self.average_time = (sum(self.data_time.values()) / self.days_learned) if self.days_learned else 0
+        if self.now.year == self.month_start.year and self.now.month == self.month_start.month:
+            avg_end = self.now.day
+        else:
+            avg_end = len(self.this_month)
+        self.daily_average = sum(self.this_month) / avg_end
 
+        nonzero = [day for month in self.data_monthly for day in month if day]
+
+        self.days_active = len(nonzero)
+        self.graph_average = (sum(nonzero) / len(nonzero)) if nonzero else 0
+
+        # Drawing state
         self.image = None
 
     def draw(self) -> Image:
@@ -278,7 +423,8 @@ class MonthlyStatsPage(Layout):
         xpos, ypos = 0, 0
 
         # Draw header text
-        xpos = (image.width - self.skin.title_size[0]) // 2
+        title_size = self.skin.title_size
+        xpos = (image.width - title_size[0]) // 2
         ypos += self.skin.title_pre_gap
         draw.text(
             (xpos, ypos),
@@ -288,7 +434,6 @@ class MonthlyStatsPage(Layout):
         )
 
         # Underline it
-        title_size = self.skin.title_font.getsize(self.skin.title_text)
         ypos += title_size[1] + self.skin.title_underline_gap
         # draw.line(
         #     (xpos, ypos, xpos + title_size[0], ypos),
@@ -324,10 +469,13 @@ class MonthlyStatsPage(Layout):
         # Draw the footer
         ypos = image.height
         ypos -= self.skin.footer_gap
-        date_text = self.data_date.strftime(
-            "Monthly Statistics • As of %d %b • {} {}".format(self.data_name, self.data_discrim)
+        date_text = self.skin.footer_text.format(
+            day=self.now.day,
+            month=local_month(self.now.month, short=True),
+            name=self.data_name,
+            discrim=self.data_discrim
         )
-        size = self.skin.footer_font.getsize(date_text)
+        size = self.skin.footer_font.getbbox(date_text)[2:]
         ypos -= size[1]
         draw.text(
             ((image.width - size[0]) // 2, ypos),
@@ -338,9 +486,9 @@ class MonthlyStatsPage(Layout):
         return image
 
     def draw_summaries(self) -> Image:
-        this_month_text = " THIS MONTH: {} Hours".format(int(sum(self.hours_this_month)))
+        this_month_text = " THIS MONTH: {} Hours".format(int(sum(self.data_monthly[-1])))
         this_month_length = int(self.skin.this_month_font.getlength(this_month_text))
-        last_month_text = " LAST MONTH: {} Hours".format(int(sum(self.hours_last_month)))
+        last_month_text = " LAST MONTH: {} Hours".format(int(sum(self.data_monthly[-2])))
         last_month_length = int(self.skin.last_month_font.getlength(last_month_text))
 
         image = Image.new(
@@ -386,21 +534,22 @@ class MonthlyStatsPage(Layout):
         return image
 
     def draw_top(self) -> Image:
+        top_hours_bg = self.draw_hours_bg()
         size_x = (
-            self.skin.top_hours_bg.width // 2 + self.skin.top_hours_sep
-            + (self.this_month_days - 1) * self.skin.top_grid_x + self.skin.top_bar_mask.width // 2
-            + self.skin.top_hours_bg.width // 2
+            top_hours_bg.width // 2 + self.skin.top_hours_sep
+            + (self.max_day_label - 1) * self.skin.top_grid_x + self.skin.top_bar_mask.width // 2
+            + top_hours_bg.width // 2
         )
         size_y = (
-            self.skin.top_hours_bg.height // 2 + 4 * self.skin.top_grid_y + self.skin.top_date_pre_gap
+            top_hours_bg.height // 2 + 4 * self.skin.top_grid_y + self.skin.top_date_pre_gap
             + self.skin.top_date_height
-            + self.skin.top_time_bar_sep + int(self.skin.top_this_hours_font.getlength('24 H  24 H'))
+            + self.skin.top_time_bar_sep + int(self.skin.top_this_hours_font.getlength('240 H  240 H'))
         )
         image = Image.new('RGBA', (size_x, size_y))
         draw = ImageDraw.Draw(image)
 
-        x0 = self.skin.top_hours_bg.width // 2 + self.skin.top_hours_sep
-        y0 = self.skin.top_hours_bg.height // 2 + 4 * self.skin.top_grid_y
+        x0 = top_hours_bg.width // 2 + self.skin.top_hours_sep
+        y0 = top_hours_bg.height // 2 + 4 * self.skin.top_grid_y
         y0 += self.skin.top_time_bar_sep + int(self.skin.top_this_hours_font.getlength('24 H  24 H'))
 
         # Draw lines and numbers
@@ -416,8 +565,8 @@ class MonthlyStatsPage(Layout):
             )
 
             image.alpha_composite(
-                self.skin.top_hours_bg,
-                (xpos - self.skin.top_hours_bg.width // 2, ypos - self.skin.top_hours_bg.height // 2)
+                top_hours_bg,
+                (xpos - top_hours_bg.width // 2, ypos - top_hours_bg.height // 2)
             )
             text = str(label)
             draw.text(
@@ -432,7 +581,7 @@ class MonthlyStatsPage(Layout):
         # Draw dates
         xpos = x0
         ypos = y0 + self.skin.top_date_pre_gap
-        for i in range(1, self.this_month_days + 1):
+        for i in range(1, self.max_day_label + 1):
             draw.text(
                 (xpos, ypos),
                 str(i),
@@ -443,7 +592,10 @@ class MonthlyStatsPage(Layout):
             xpos += self.skin.top_grid_x
 
         # Draw bars
-        for i, (last_hours, this_hours) in enumerate(zip(self.hours_last_month, self.hours_this_month)):
+        this_pad = (0 for _ in range(len(self.this_month), self.max_day_label))
+        last_pad = (0 for _ in range(len(self.last_month), self.max_day_label))
+        pairs = zip((*self.last_month, *last_pad), (*self.this_month, *this_pad))
+        for i, (last_hours, this_hours) in enumerate(pairs):
             xpos = x0 + i * self.skin.top_grid_x
 
             if not (last_hours or this_hours):
@@ -469,8 +621,11 @@ class MonthlyStatsPage(Layout):
 
             # Draw text
             if bar_height:
-                text = ['{} H'.format(hours) for hours in (last_hours, this_hours) if hours]
-                text_size = self.skin.top_this_hours_font.getsize('  '.join(text))
+                text = [
+                    self.skin.top_hours_text.format(value=int(hours)) for hours in (last_hours, this_hours) if hours
+                ]
+                left, top, right, btm = self.skin.top_this_hours_font.getbbox('  '.join(text))
+                text_size = (right, btm)
                 text_image = Image.new(
                     'RGBA',
                     text_size
@@ -478,7 +633,7 @@ class MonthlyStatsPage(Layout):
                 text_draw = ImageDraw.Draw(text_image)
                 txpos = 0
                 if last_hours:
-                    last_text = "{} H  ".format(int(last_hours))
+                    last_text = self.skin.top_hours_text.format(value=int(last_hours)) + ' '
                     text_draw.text(
                         (txpos, 0), last_text,
                         fill=self.skin.top_last_hours_colour,
@@ -486,7 +641,7 @@ class MonthlyStatsPage(Layout):
                     )
                     txpos += self.skin.top_last_hours_font.getlength(last_text)
                 if this_hours:
-                    this_text = "{} H  ".format(int(this_hours))
+                    this_text = self.skin.top_hours_text.format(value=int(this_hours))
                     text_draw.text(
                         (txpos, 0), this_text,
                         fill=self.skin.top_this_hours_colour,
@@ -501,6 +656,28 @@ class MonthlyStatsPage(Layout):
                     (xpos - text_image.width // 2,
                      y0 - bar_height - self.skin.top_time_bar_sep - text_image.height)
                 )
+
+        return image
+
+    def draw_hours_bg(self) -> Image:
+        """
+        Draw a dynamically sized blob for the background of the hours axis in the top graph.
+        """
+        blob = self.skin.top_hours_bg
+        font = self.skin.top_hours_font
+
+        labels = list(int(i * self.max_hour_label // 4) for i in range(0, 5))
+        max_width = int(max(font.getlength(str(label)) for label in labels))
+        window = int(blob.width * 5/8)
+
+        if max_width > window:
+            shift = max_width - window
+
+            image = Image.new('RGBA', (blob.width + shift, blob.height))
+            image.paste(blob, (0, 0))
+            image.alpha_composite(blob, (shift, 0))
+        else:
+            image = blob
 
         return image
 
@@ -545,7 +722,7 @@ class MonthlyStatsPage(Layout):
         # Draw the months
         x0 = self.skin.weekday_background.width + self.skin.weekday_sep
         for i, date in enumerate(self.months):
-            name = date.strftime('%B').upper()
+            name = local_month(date.month, short=False).upper()
 
             x = x0 + i * (self.skin.month_background.width + self.skin.month_sep)
             image.alpha_composite(
@@ -561,7 +738,7 @@ class MonthlyStatsPage(Layout):
                 anchor='mm'
             )
 
-            heatmap = self.draw_month_heatmap(date)
+            heatmap = self.draw_month_heatmap(i)
             image.alpha_composite(
                 heatmap,
                 (xpos + x + self.skin.month_background.width // 2 - heatmap.width // 2, ypos + y0)
@@ -571,12 +748,9 @@ class MonthlyStatsPage(Layout):
         x = xpos + self.skin.weekday_background.width // 2
         y = image.height - self.skin.bottom_margins[1]
 
-        key_text = "Current streak: "
-        key_len = self.skin.stats_key_font.getlength(key_text)
-        value_text = "{} day{}".format(
-            self.current_streak,
-            's' if self.current_streak != 1 else ''
-        )
+        key_text = self.skin.current_streak_key_text
+        key_len = self.skin.stats_key_font.getlength(key_text + ' ')
+        value_text = self.skin.current_streak_value_text.format(count=self.data_current_streak)
         draw.text(
             (x, y),
             key_text,
@@ -591,12 +765,9 @@ class MonthlyStatsPage(Layout):
         )
         x += self.skin.stats_sep
 
-        key_text = "Daily average: "
-        key_len = self.skin.stats_key_font.getlength(key_text)
-        value_text = "{} hour{}".format(
-            (hours := int(self.average_time // 3600)),
-            's' if hours != 1 else ''
-        )
+        key_text = self.skin.longest_streak_key_text
+        key_len = self.skin.stats_key_font.getlength(key_text + ' ')
+        value_text = self.skin.longest_streak_value_text.format(count=self.data_longest_streak)
         draw.text(
             (x, y),
             key_text,
@@ -611,12 +782,9 @@ class MonthlyStatsPage(Layout):
         )
         x += self.skin.stats_sep
 
-        key_text = "Longest streak: "
-        key_len = self.skin.stats_key_font.getlength(key_text)
-        value_text = "{} day{}".format(
-            self.longest_streak,
-            's' if self.current_streak != 1 else ''
-        )
+        key_text = self.skin.daily_average_key_text
+        key_len = self.skin.stats_key_font.getlength(key_text + ' ')
+        value_text = self.skin.daily_average_value_text.format(count=int(self.daily_average))
         draw.text(
             (x, y),
             key_text,
@@ -631,11 +799,9 @@ class MonthlyStatsPage(Layout):
         )
         x += self.skin.stats_sep
 
-        key_text = "Days learned: "
-        key_len = self.skin.stats_key_font.getlength(key_text)
-        value_text = "{}%".format(
-            int((100 * self.days_learned) // self.days_since_start)
-        )
+        key_text = self.skin.days_active_key_text
+        key_len = self.skin.stats_key_font.getlength(key_text + ' ')
+        value_text = self.skin.days_active_value_text.format(count=self.days_active)
         draw.text(
             (x, y),
             key_text,
@@ -652,8 +818,12 @@ class MonthlyStatsPage(Layout):
 
         return image
 
-    def draw_month_heatmap(self, month_start) -> Image:
+    def draw_month_heatmap(self, index) -> Image:
+        month_start = self.months[index]
+        month_data = self.data_monthly[index]
         cal = calendar.monthcalendar(month_start.year, month_start.month)
+        print(self.month_start)
+        print(cal)
         columns = len(cal)
 
         size_x = (
@@ -671,11 +841,11 @@ class MonthlyStatsPage(Layout):
 
         for (i, week) in enumerate(cal):
             xpos = x0 + i * self.skin.btm_grid_x
+            print(week)
             for (j, day) in enumerate(week):
                 if day:
                     ypos = y0 + j * self.skin.btm_grid_y
-                    date = datetime.date(month_start.year, month_start.month, day)
-                    time = self.data_time[date]
+                    time = month_data[day-1]
                     bubble = self.draw_bubble(time)
                     image.alpha_composite(
                         bubble,
@@ -690,7 +860,7 @@ class MonthlyStatsPage(Layout):
             image = self.skin.heatmap_empty
             colour = self.skin.heatmap_empty_colour
         else:
-            amount = min((time / self.average_time) if self.average_time else 0, 2) / 2
+            amount = min((time / self.graph_average) if self.graph_average else 0, 2) / 2
             index = math.ceil(amount * len(self.skin.heatmap_colours)) - 1
             colour = self.skin.heatmap_colours[index]
 
@@ -713,38 +883,39 @@ class MonthlyStatsCard(Card):
         import random
         from datetime import timezone, datetime, timedelta
 
-        sessions = []
+        current = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        month = current.replace(day=1)
+
+        months = [month]
+        for i in range(3):
+            months.append((months[-1] - timedelta(days=1)).replace(day=1))
+        months.reverse()
+
         streak = 0
         longest_streak = 0
-        day_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-        day_start -= timedelta(hours=24) * 120
-        for day in range(0, 120):
-            day_start += timedelta(hours=24)
-
-            roll = random.randint(0, 30)
-            if roll == 0:
-                longest_streak = max(streak, longest_streak)
-                streak = 0
-                continue
-            else:
-                streak += 1
-
-            # start of day
-            pointer = 6 * 60
-            session_duration = int(abs(random.normalvariate(8 * 60, 2 * 60)))
-            sessions.append((
-                day_start + timedelta(minutes=pointer),
-                day_start + timedelta(minutes=(pointer + session_duration)),
-            )
-            )
+        monthly = [[], [], [], []]
+        for i, month in enumerate(months):
+            day_count = ((month + timedelta(days=32)).replace(day=1) - timedelta(days=1)).day
+            for j in range(day_count):
+                if (i == 3 and j >= current.day) or random.randint(0, 30) == 0:
+                    longest_streak = max(streak, longest_streak)
+                    streak = 0
+                    value = 0
+                else:
+                    streak += 1
+                    value = abs(random.normalvariate(800, 200))
+                monthly[i].append(value)
         longest_streak = max(streak, longest_streak)
 
         return {
-            'name': ctx.author.name if ctx else "John Doe",
-            'discrim': ('#' + ctx.author.discriminator) if ctx else "#0000",
-            'sessions': sessions,
-            'date': datetime.now(timezone.utc).date(),
+            'user': (
+                ctx.author.name if ctx else "John Doe",
+                ('#' + ctx.author.discriminator) if ctx else "#0000"
+            ),
+            'timezone': 'utc',
+            'now': int(datetime.now(tz=timezone.utc).timestamp()),
+            'month': int(month.timestamp()),
+            'monthly': monthly,
             'current_streak': streak,
-            'longest_streak': longest_streak,
-            'first_session_start': day_start - timedelta(days=200)
+            'longest_streak': longest_streak
         }

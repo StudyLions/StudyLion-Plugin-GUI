@@ -54,6 +54,7 @@ def inter_font(name, **kwargs):
 def get_font(family, name, **kwargs):
     return ImageFont.truetype(
         asset_path(f"fonts/{family}/{family}-{name}.ttf"),
+        layout_engine=ImageFont.LAYOUT_BASIC,
         **kwargs
     )
 

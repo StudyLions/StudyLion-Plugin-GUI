@@ -10,6 +10,7 @@ import random
 
 from meta.logger import log_app, logging_context, log_context, log_action_stack
 from meta.config import conf
+from babel.translator import LeoBabel, ctx_translator
 
 from ..routes import routes
 from ..utils import RequestState
@@ -130,6 +131,10 @@ def worker_configurer():
     log_context.set(f"PROC: {name}")
     log_action_stack.set([name])
     logger.info(f"Launching new pool process: {name}.")
+
+    translator = LeoBabel()
+    translator._load()
+    ctx_translator.set(translator)
 
 
 async def main():

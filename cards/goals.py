@@ -1,18 +1,26 @@
 import math
+import logging
 import datetime
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageOps, ImageColor
 
-from ..base import Card, Layout, fielded, Skin, FieldDesc
+from babel.translator import LocalBabel
+from babel.utils import local_month
+
+from ..base import Card, Layout, fielded, Skin, FieldDesc, CardMode
 from ..base.Avatars import avatar_manager
 from ..base.Skin import (
     AssetField, RGBAAssetField, BlobField, AssetPathField, StringField, NumberField,
-    FontField, ColourField, PointField, ComputedField
+    FontField, ColourField, PointField, ComputedField, LazyStringField, RawField
 )
 
 from ..utils import get_avatar_key
 
 from .mixins import MiniProfileLayout
+
+logger = logging.getLogger(__name__)
+babel = LocalBabel('goals-gui')
+_p = babel._p
 
 
 @fielded
@@ -20,6 +28,8 @@ class _GoalSkin(Skin):
     _env = {
         'scale': 2  # General size scale to match background resolution
     }
+
+    mode: RawField = CardMode.TEXT
 
     background: AssetField = "goals/background.png"
 
@@ -29,7 +39,7 @@ class _GoalSkin(Skin):
     title_pre_gap: NumberField = 40
     title_text: StringField = ""
     title_font: FontField = ('ExtraBold', 76)
-    title_size: ComputedField = lambda skin: skin.title_font.getsize(skin.title_text)
+    title_size: ComputedField = lambda skin: skin.title_font.getbbox(skin.title_text)[2:]
     title_colour: ColourField = '#DDB21D'
     title_underline_gap: NumberField = 10
     title_underline_width: NumberField = 0
@@ -80,6 +90,14 @@ class _GoalSkin(Skin):
     line_gap: NumberField = 5
     progress_text_at: ComputedField = lambda skin: 7 * (skin.progress_bg.height // 10)
 
+    task_name_text: LazyStringField = _p(
+        'skin:goals|goal:tasks|name',
+        "TASKS DONE"
+    )
+    task_goal_text: LazyStringField = _p(
+        'skin:goals|goal:tasks|goal',
+        "GOAL: "
+    )
     task_count_font: FontField = ('Bold', 76)
     task_count_colour: ColourField = '#DDB21D'
     task_done_font: FontField = ('Bold', 37)
@@ -89,36 +107,84 @@ class _GoalSkin(Skin):
     task_goal_number_font: FontField = ('Light', 27)
     task_goal_number_colour: ColourField = '#FFFFFF'
     task_text_size: ComputedField = lambda skin: (
-        skin.task_count_font.getsize("00")[0]
-        + skin.task_done_font.getsize("TASKS DONE")[0]
-        + skin.task_goal_font.getsize("GOAL")[0]
+        skin.task_count_font.getlength("00")
+        + skin.task_done_font.getlength("TASKS DONE")
+        + skin.task_goal_font.getlength("GOAL")
         + 3 * skin.line_gap,
-        skin.task_done_font.getsize("TASKS DONE")[1]
+        skin.task_done_font.getbbox("TASKS DONE")[-1]
     )
     task_progress_text_height: ComputedField = lambda skin: (
-        skin.task_count_font.getsize('100')[1] +
-        skin.task_done_font.getsize('TASKS DONE')[1] +
-        skin.task_goal_font.getsize('GOAL')[1] +
+        skin.task_count_font.getbbox('100')[-1] +
+        skin.task_done_font.getbbox('TASKS DONE')[-1] +
+        skin.task_goal_font.getbbox('GOAL')[-1] +
         2 * skin.line_gap
     )
 
+    attendance_text: LazyStringField = _p(
+        'skin:goals|goal:attendance|name',
+        "ATTENDANCE\nRATE"
+    )
     attendance_rate_font: FontField = ('Bold', 76)
     attendance_rate_colour: ColourField = '#DDB21D'
     attendance_font: FontField = ('Bold', 37)
     attendance_colour: ColourField = '#FFFFFF'
     attendance_text_height: ComputedField = lambda skin: (
-        skin.attendance_rate_font.getsize('100%')[1] +
-        skin.attendance_font.getsize('ATTENDANCE')[1] * 2 +
+        skin.attendance_rate_font.getbbox('100%')[-1] +
+        skin.attendance_font.getbbox('ATTENDANCE')[-1] * 2 +
         2 * skin.line_gap
     )
 
+    study_studied_above_text: LazyStringField = _p(
+        'skin:goals|mode:study|goal:middle|above',
+        "STUDIED"
+    )
+    study_studied_below_text: LazyStringField = _p(
+        'skin:goals|mode:study|goal:middle|below',
+        "HOURS"
+    )
+    voice_studied_above_text: LazyStringField = _p(
+        'skin:goals|mode:voice|goal:middle|above',
+        "CHATTED"
+    )
+    voice_studied_below_text: LazyStringField = _p(
+        'skin:goals|mode:voice|goal:middle|below',
+        "HOURS"
+    )
+    text_studied_above_text: LazyStringField = _p(
+        'skin:goals|mode:text|goal:middle|above',
+        "SENT"
+    )
+    text_studied_below_text: LazyStringField = _p(
+        'skin:goals|mode:text|goal:middle|below',
+        "MESSAGES"
+    )
+    anki_studied_above_text: LazyStringField = _p(
+        'skin:goals|mode:anki|goal:middle|above',
+        "REVIEWED"
+    )
+    anki_studied_below_text: LazyStringField = _p(
+        'skin:goals|mode:anki|goal:middle|below',
+        "CARDS"
+    )
+    studied_above_text: ComputedField = lambda skin: {
+        CardMode.STUDY: skin.study_studied_above_text,
+        CardMode.VOICE: skin.voice_studied_above_text,
+        CardMode.TEXT: skin.text_studied_above_text,
+        CardMode.ANKI: skin.anki_studied_above_text,
+    }[skin.mode]
+    studied_below_text: ComputedField = lambda skin: {
+        CardMode.STUDY: skin.study_studied_below_text,
+        CardMode.VOICE: skin.voice_studied_below_text,
+        CardMode.TEXT: skin.text_studied_below_text,
+        CardMode.ANKI: skin.anki_studied_below_text,
+    }[skin.mode]
     studied_text_font: FontField = ('Bold', 37)
     studied_text_colour: ColourField = '#FFFFFF'
     studied_hour_font: FontField = ('Bold', 60)
     studied_hour_colour: ColourField = '#DDB21D'
     studied_text_height: ComputedField = lambda skin: (
-        skin.studied_text_font.getsize('STUDIED')[1] * 2
-        + skin.studied_hour_font.getsize('400')[1]
+        skin.studied_text_font.getbbox('STUDIED')[-1] * 2
+        + skin.studied_hour_font.getbbox('400')[-1]
         + 2 * skin.line_gap
     )
 
@@ -152,11 +218,15 @@ class _GoalSkin(Skin):
     task_undone_text_font: FontField = ('Regular', 35)
     task_undone_text_colour: ColourField = '#FFFFFF'
 
-    task_text_height: ComputedField = lambda skin: skin.task_done_text_font.getsize('TASK')[1]
+    task_text_height: ComputedField = lambda skin: skin.task_done_text_font.getbbox('TASK')[-1]
     task_num_sep: NumberField = 15
     task_inter_gap: NumberField = 25
 
     # Date text
+    footer_text: LazyStringField = _p(
+        'skin:goals|footer',
+        "As of {day} {month} • {name} {discrim}"
+    )
     footer_pre_gap: NumberField = 25
     footer_font: FontField = ('Bold', 28)
     footer_colour: ColourField = '#6f6e6f'
@@ -165,16 +235,28 @@ class _GoalSkin(Skin):
 
 @fielded
 class WeeklyGoalSkin(_GoalSkin):
-    title_text: StringField = "WEEKLY STATISTICS"
-    task_header: StringField = "GOALS OF THE WEEK"
+    title_text: LazyStringField = _p(
+        'ui:goals|weekly|title',
+        "WEEKLY STATISTICS"
+    )
+    task_header: LazyStringField = _p(
+        'ui:goals|weekly|task_header',
+        "GOALS OF THE WEEK"
+    )
 
     help_frame: AssetField = "weekly/help_frame.png"
 
 
 @fielded
 class MonthlyGoalSkin(_GoalSkin):
-    title_text: StringField = "MONTHLY STATISTICS"
-    task_header: StringField = "GOALS OF THE MONTH"
+    title_text: LazyStringField = _p(
+        'ui:goals|monthly|title',
+        "MONTHLY STATISTICS"
+    )
+    task_header: LazyStringField = _p(
+        'ui:goals|monthly|task_header',
+        "GOALS OF THE MONTH"
+    )
 
     help_frame: AssetField = "monthly/help_frame.png"
 
@@ -184,7 +266,7 @@ class GoalPage(Layout, MiniProfileLayout):
                  name, discrim, avatar, badges,
                  tasks_done, studied_hours, attendance,
                  tasks_goal, studied_goal, goals,
-                 date):
+                 date, **kwargs):
         self.skin = skin
 
         self.data_name = name
@@ -204,8 +286,15 @@ class GoalPage(Layout, MiniProfileLayout):
         self.image = None
 
     def draw(self) -> Image:
+        import time
+        starting = time.time()
+        stopwatch = starting
+
         image = self.skin.background
         draw = ImageDraw.Draw(image)
+        print("Loaded background at {1:.5f} (+{0:.5f})".format(
+            - stopwatch + (stopwatch := time.time()), stopwatch - starting
+        ))
 
         xpos, ypos = 0, 0
 
@@ -220,7 +309,7 @@ class GoalPage(Layout, MiniProfileLayout):
         )
 
         # Underline it
-        title_size = self.skin.title_font.getsize(self.skin.title_text)
+        title_size = self.skin.title_font.getbbox(self.skin.title_text)[2:]
         ypos += title_size[1] + self.skin.title_gap
         # ypos += title_size[1] + self.skin.title_underline_gap
         # draw.line(
@@ -231,20 +320,31 @@ class GoalPage(Layout, MiniProfileLayout):
         # ypos += self.skin.title_underline_width + self.skin.title_gap
 
         # Draw the profile
+        print("Finished title at {1:.5f} (+{0:.5f})".format(
+            - stopwatch + (stopwatch := time.time()), stopwatch - starting
+        ))
         xpos = self.skin.mini_profile_indent
         profile = self._draw_profile()
         image.alpha_composite(
             profile,
             (xpos, ypos)
         )
+        print("Finished profile at {1:.5f} (+{0:.5f})".format(
+            - stopwatch + (stopwatch := time.time()), stopwatch - starting
+        ))
 
         # Start from the bottom
         ypos = image.height
 
         # Draw the date text
         ypos -= self.skin.footer_gap
-        date_text = self.data_date.strftime("As of %d %b • {} {}".format(self.data_name, self.data_discrim))
-        size = self.skin.footer_font.getsize(date_text)
+        date_text = self.skin.footer_text.format(
+            day=self.data_date.day,
+            month=local_month(self.data_date.month, short=True),
+            name=self.data_name,
+            discrim=self.data_discrim
+        )
+        size = self.skin.footer_font.getbbox(date_text)[2:]
         ypos -= size[1]
         draw.text(
             ((image.width - size[0]) // 2, ypos),
@@ -253,6 +353,9 @@ class GoalPage(Layout, MiniProfileLayout):
             fill=self.skin.footer_colour
         )
         ypos -= self.skin.footer_pre_gap
+        print("Finished footer at {1:.5f} (+{0:.5f})".format(
+            - stopwatch + (stopwatch := time.time()), stopwatch - starting
+        ))
 
         if self.data_goals or self.data_tasks_goal or self.data_studied_goal:
             # Draw the tasks
@@ -263,6 +366,9 @@ class GoalPage(Layout, MiniProfileLayout):
                 task_image,
                 ((image.width - task_image.width) // 2, ypos)
             )
+            print("Finished tasks at {1:.5f} (+{0:.5f})".format(
+                - stopwatch + (stopwatch := time.time()), stopwatch - starting
+            ))
 
             # Draw the progress bars
             progress_image = self._draw_progress()
@@ -271,15 +377,24 @@ class GoalPage(Layout, MiniProfileLayout):
                 progress_image,
                 ((image.width - progress_image.width) // 2, ypos)
             )
+            print("Finished bars at {1:.5f} (+{0:.5f})".format(
+                - stopwatch + (stopwatch := time.time()), stopwatch - starting
+            ))
         else:
             ypos -= self.skin.help_frame.height
             image.alpha_composite(
                 self.skin.help_frame,
                 ((image.width - self.skin.help_frame.width) // 2, ypos)
             )
+            print("Finished help at {1:.5f} (+{0:.5f})".format(
+                - stopwatch + (stopwatch := time.time()), stopwatch - starting
+            ))
 
         self.image = image
 
+        print("Finished drawing at {1:.5f} (+{0:.5f})".format(
+            - stopwatch + (stopwatch := time.time()), stopwatch - starting
+        ))
         return image
 
     def _draw_tasks(self):
@@ -298,7 +413,7 @@ class GoalPage(Layout, MiniProfileLayout):
         )
 
         # Underline it
-        title_size = self.skin.task_header_font.getsize(self.skin.task_header)
+        title_size = self.skin.task_header_font.getbbox(self.skin.task_header)[2:]
         ypos += title_size[1] + self.skin.task_underline_gap
         draw.line(
             (xpos, ypos, xpos + title_size[0], ypos),
@@ -387,9 +502,9 @@ class GoalPage(Layout, MiniProfileLayout):
             fill=self.skin.task_count_colour,
             anchor='mt'
         )
-        ypos += self.skin.task_count_font.getsize(text)[1] + self.skin.line_gap
+        ypos += self.skin.task_count_font.getbbox(text)[-1] + self.skin.line_gap
 
-        text = "TASKS DONE"
+        text = self.skin.task_name_text
         draw.text(
             (xpos, ypos),
             text,
@@ -397,9 +512,9 @@ class GoalPage(Layout, MiniProfileLayout):
             fill=self.skin.task_done_colour,
             anchor='mt'
         )
-        ypos += self.skin.task_done_font.getsize(text)[1] + self.skin.line_gap
+        ypos += self.skin.task_done_font.getbbox(text)[-1] + self.skin.line_gap
 
-        text1 = "GOAL: "
+        text1 = self.skin.task_goal_text + ' '
         length1 = self.skin.task_goal_font.getlength(text1)
         text2 = str(self.data_tasks_goal) if self.data_tasks_goal else "N/A"
         length2 = self.skin.task_goal_number_font.getlength(text2)
@@ -431,7 +546,7 @@ class GoalPage(Layout, MiniProfileLayout):
         ypos = self.skin.progress_text_at - self.skin.studied_text_height
         xpos = progress_image.width // 2
 
-        text = "STUDIED"
+        text = self.skin.studied_above_text
         draw.text(
             (xpos, ypos),
             text,
@@ -439,7 +554,7 @@ class GoalPage(Layout, MiniProfileLayout):
             fill=self.skin.studied_text_colour,
             anchor='mt'
         )
-        ypos += self.skin.studied_text_font.getsize(text)[1] + self.skin.line_gap
+        ypos += self.skin.studied_text_font.getbbox(text)[-1] + self.skin.line_gap
 
         if self.data_studied_goal:
             text = f"{self.data_studied_hours}/{self.data_studied_goal}"
@@ -452,9 +567,9 @@ class GoalPage(Layout, MiniProfileLayout):
             fill=self.skin.studied_hour_colour,
             anchor='mt'
         )
-        ypos += self.skin.studied_hour_font.getsize(text)[1] + self.skin.line_gap
+        ypos += self.skin.studied_hour_font.getbbox(text)[-1] + self.skin.line_gap
 
-        text = "HOURS"
+        text = self.skin.studied_below_text
         draw.text(
             (xpos, ypos),
             text,
@@ -484,26 +599,19 @@ class GoalPage(Layout, MiniProfileLayout):
             fill=self.skin.attendance_rate_colour,
             anchor='mt'
         )
-        ypos += self.skin.attendance_rate_font.getsize(text)[1] + self.skin.line_gap
+        ypos += self.skin.attendance_rate_font.getbbox(text)[-1] + self.skin.line_gap
 
-        text = "ATTENDANCE"
-        draw.text(
-            (xpos, ypos),
-            text,
-            font=self.skin.attendance_font,
-            fill=self.skin.attendance_colour,
-            anchor='mt'
-        )
-        ypos += self.skin.attendance_font.getsize(text)[1] + self.skin.line_gap
+        texts = self.skin.attendance_text.splitlines()
 
-        text = "RATE"
-        draw.text(
-            (xpos, ypos),
-            text,
-            font=self.skin.attendance_font,
-            fill=self.skin.attendance_colour,
-            anchor='mt'
-        )
+        for text in texts:
+            draw.text(
+                (xpos, ypos),
+                text,
+                font=self.skin.attendance_font,
+                fill=self.skin.attendance_colour,
+                anchor='mt'
+            )
+            ypos += self.skin.attendance_font.getbbox(text)[-1] + self.skin.line_gap
         return progress_image
 
     def _draw_tasks_into(self, tasks, image) -> Image:
@@ -514,17 +622,30 @@ class GoalPage(Layout, MiniProfileLayout):
         xpos, ypos = 0, 0
 
         for n, task, done in tasks:
-            # Draw task first to check if it fits on the page
-            task_image = self._draw_text(
-                task,
-                image.width - xpos - self.skin.task_done_number_bg.width - self.skin.task_num_sep,
-                done
-            )
-            if task_image.height + ypos > image.height:
+            bg = self.skin.task_done_number_bg if done else self.skin.task_undone_number_bg
+
+            font = self.skin.task_done_text_font if done else self.skin.task_undone_text_font
+            colour = self.skin.task_done_text_colour if done else self.skin.task_undone_text_colour
+
+            # Measure task first to check if it fits on the page
+            x1, y1, x2, y2 = font.getbbox(task)
+            if y2 + ypos > image.height:
                 break
 
+            # Draw task
+            pos = (xpos + bg.width + self.skin.task_num_sep, ypos - (bg.height - self.skin.task_text_height) // 2)
+            draw.text(pos, task, font=font, fill=colour)
+
+            # Strikethrough if required
+            if done:
+                x, y = pos
+                draw.line(
+                    (x + x1, y + y1 + (y2 - y1) // 2, x + x2, y + y1 + (y2 - y1) // 2),
+                    fill=self.skin.task_done_text_colour,
+                    width=self.skin.task_done_line_width
+                )
+
             # Draw number background
-            bg = self.skin.task_done_number_bg if done else self.skin.task_undone_number_bg
             image.alpha_composite(
                 bg,
                 (xpos, ypos)
@@ -541,13 +662,7 @@ class GoalPage(Layout, MiniProfileLayout):
                 anchor='mm'
             )
 
-            # Draw text
-            image.alpha_composite(
-                task_image,
-                (xpos + bg.width + self.skin.task_num_sep, ypos - (bg.height - self.skin.task_text_height) // 2)
-            )
-
-            ypos += task_image.height + self.skin.task_inter_gap
+            ypos += y2 + self.skin.task_inter_gap
 
         return image
 
@@ -558,7 +673,7 @@ class GoalPage(Layout, MiniProfileLayout):
         font = self.skin.task_done_text_font if done else self.skin.task_undone_text_font
         colour = self.skin.task_done_text_colour if done else self.skin.task_undone_text_colour
 
-        size = font.getsize(task)
+        size = font.getbbox(task)[2:]
         image = Image.new('RGBA', (min(size[0], maxwidth), size[1]))
         draw = ImageDraw.Draw(image)
 
@@ -707,8 +822,8 @@ class WeeklyGoalCard(_GoalCard):
             ),
             'tasks_done': 100,
             'tasks_goal': 300,
-            'studied_hours': 16,
-            'studied_goal': 48,
+            'studied_hours': 160,
+            'studied_goal': 480,
             'attendance': 0.9,
             'goals': [(0, 'Write a 200 page thesis', False),
                       (1, 'Feed the kangaroo', True),

@@ -2,11 +2,17 @@ import itertools
 from datetime import datetime, timedelta
 from PIL import Image, ImageDraw
 
+from babel.translator import LocalBabel
+
 from ..base import Card, Layout, fielded, Skin
 from ..base.Skin import (
     AssetField, BlobField, StringField, NumberField, RawField,
-    FontField, ColourField, PointField, ComputedField, FieldDesc
+    FontField, ColourField, PointField, ComputedField, FieldDesc,
+    LazyStringField
 )
+
+babel = LocalBabel('stats-gui')
+_p = babel._p
 
 
 def format_lb(pos):
@@ -57,11 +63,19 @@ class StatsSkin(Skin):
     header_height: ComputedField = lambda skin: skin.header_font.getsize('STATISTICS')[1]
 
     # First column
-    col1_header: StringField = 'STATISTICS'
+    col1_header: LazyStringField = _p('skin:stats|header:col1', 'STATISTICS')
     col1_header_height: ComputedField = lambda skin: skin.header_font.getsize(skin.col1_header)[1]
-    stats_subheader_leaderboard: StringField = 'LEADERBOARD POSITION'
-    stats_subheader_study: StringField = 'STUDY TIME'
-    stats_subheader_workouts: StringField = 'WORKOUTS'
+    stats_subheader_leaderboard: LazyStringField = _p(
+        'skin:stats|subheader:leaderboard', 'LEADERBOARD POSITION'
+    )
+    stats_subheader_study: LazyStringField = _p(
+        'skin:stats|subheader:study',
+        'STUDY TIME'
+    )
+    stats_subheader_workouts: LazyStringField = _p(
+        'skin:stats|subheader:workouts',
+        'WORKOUTS'
+    )
     stats_subheader_pregap: NumberField = 8
     stats_subheader_font: FontField = ('Black', 21)
     stats_subheader_colour: ColourField = '#FFFFFF'
@@ -70,9 +84,30 @@ class StatsSkin(Skin):
     )
     stats_text_gap: NumberField = 13  # Gap between stat lines
     stats_text_font: FontField = ('SemiBold', 19)
-    stats_text_daily: StringField = 'DAILY'
-    stats_text_weekly: StringField = 'WEEKLY'
-    stats_text_monthly: StringField = 'MONTHLY'
+    stats_text_daily: LazyStringField = _p(
+        'skin:stats|field:daily',
+        'DAILY'
+    )
+    stats_text_weekly: LazyStringField = _p(
+        'skin:stats|field:weekly',
+        'WEEKLY'
+    )
+    stats_text_monthly: LazyStringField = _p(
+        'skin:stats|field:monthly',
+        'MONTHLY'
+    )
+    stats_text_alltime: LazyStringField = _p(
+        'skin:stats|field:alltime',
+        'ALL TIME'
+    )
+    stats_text_time: LazyStringField = _p(
+        'skin:stats|field:time',
+        'TIME'
+    )
+    stats_text_anki: LazyStringField = _p(
+        'skin:stats|field:anki',
+        'ANKI: COMING SOON'
+    )
     stats_text_height: ComputedField = lambda skin: skin.stats_text_font.getsize(skin.stats_text_daily)[1]
     stats_text_colour: ColourField = '#BABABA'
 
@@ -86,14 +121,16 @@ class StatsSkin(Skin):
     )
 
     # Second column
-    col2_header: StringField = 'STUDY STREAK'
+    col2_header: LazyStringField = _p(
+        'skin:stats|header:col2',
+        'STUDY STREAK'
+    )
     col2_date_font: FontField = ('Black', 21)
     col2_date_colour: ColourField = '#FFFFFF'
     col2_hours_colour: ColourField = '#1473A2'
     col2_date_gap: NumberField = 25  # Gap between date line and calender
     col2_subheader_height: ComputedField = lambda skin: skin.col2_date_font.getsize('JANUARY')[1]
     cal_column_sep: NumberField = 35
-    cal_weekday_text: RawField = ('S', 'M', 'T', 'W', 'T', 'F', 'S')
     cal_weekday_font: FontField = ('ExtraBold', 21)
     cal_weekday_colour: ColourField = '#FFFFFF'
     cal_weekday_height: ComputedField = lambda skin: skin.cal_weekday_font.getsize('S')[1]
@@ -106,6 +143,15 @@ class StatsSkin(Skin):
     cal_number_size: ComputedField = lambda skin: skin.cal_number_font.getsize('88')
 
     cal_streak_mask: AssetField = 'stats/streak_mask.png'
+
+    cal_weekday_text: LazyStringField = _p(
+        'skin:stats|cal|weekdays',
+        "S,M,T,W,T,F,S"
+    )
+    cal_month_names: LazyStringField = _p(
+        'skin:stats|cal|months',
+        "JANUARY,FEBRUARY,MARCH,APRIL,MAY,JUNE,JULY,AUGUST,SEPTEMBER,OCTOBER,NOVEMBER,DECEMBER"
+    )
 
     cal_streak_end_colour: ColourField = '#1473A2'
     cal_streak_end_colour_override: ColourField = None
@@ -156,7 +202,7 @@ class StatsSkin(Skin):
 
 class StatsLayout(Layout):
     def __init__(self, skin, lb_data, time_data, workouts, streak_data, date=None, draft=False, **kwargs):
-        self.draft = True
+        self.draft = draft
 
         self.skin = skin
 
@@ -177,7 +223,7 @@ class StatsLayout(Layout):
         month_days = (month_first_day.replace(month=(month_first_day.month % 12) + 1) - timedelta(days=1)).day
 
         self.date = date
-        self.month = date.strftime('%B').upper()
+        self.month = self.skin.cal_month_names.split(',')[date.month - 1].upper()
         self.first_weekday = month_first_day.weekday()  # Which weekday the month starts on
         self.month_days = month_days
         self.alt_layout = (month_days + self.first_weekday + 1) > 35  # Whether to use the alternate layout
@@ -240,7 +286,7 @@ class StatsLayout(Layout):
         # Leaderboard
         draw.text(
             (0, position),
-            'LEADERBOARD POSITION',
+            self.skin.stats_subheader_leaderboard,
             font=self.skin.stats_subheader_font,
             fill=self.skin.stats_subheader_colour
         )
@@ -248,7 +294,7 @@ class StatsLayout(Layout):
 
         draw.text(
             (0, position),
-            f"TIME: {format_lb(self.data_lb_time)}",
+            f"{self.skin.stats_text_time}: {format_lb(self.data_lb_time)}",
             font=self.skin.stats_text_font,
             fill=self.skin.stats_text_colour
         )
@@ -256,7 +302,7 @@ class StatsLayout(Layout):
 
         draw.text(
             (0, position),
-            "ANKI: COMING SOON",
+            self.skin.stats_text_anki,
             font=self.skin.stats_text_font,
             fill=self.skin.stats_text_colour
         )
@@ -266,7 +312,7 @@ class StatsLayout(Layout):
         # Study time
         draw.text(
             (0, position),
-            'STUDY TIME',
+            self.skin.stats_subheader_study,
             font=self.skin.stats_subheader_font,
             fill=self.skin.stats_subheader_colour
         )
@@ -274,7 +320,7 @@ class StatsLayout(Layout):
 
         draw.text(
             (0, position),
-            f'DAILY: {format_time(self.data_time_daily)}',
+            f'{self.skin.stats_text_daily}: {format_time(self.data_time_daily)}',
             font=self.skin.stats_text_font,
             fill=self.skin.stats_text_colour
         )
@@ -282,7 +328,7 @@ class StatsLayout(Layout):
 
         draw.text(
             (0, position),
-            f'MONTHLY: {format_time(self.data_time_monthly)}',
+            f'{self.skin.stats_text_weekly}: {format_time(self.data_time_weekly)}',
             font=self.skin.stats_text_font,
             fill=self.skin.stats_text_colour
         )
@@ -290,7 +336,7 @@ class StatsLayout(Layout):
 
         draw.text(
             (0, position),
-            f'WEEKLY: {format_time(self.data_time_weekly)}',
+            f'{self.skin.stats_text_monthly}: {format_time(self.data_time_monthly)}',
             font=self.skin.stats_text_font,
             fill=self.skin.stats_text_colour
         )
@@ -298,7 +344,7 @@ class StatsLayout(Layout):
 
         draw.text(
             (0, position),
-            f'ALL TIME: {format_time(self.data_time_all)}',
+            f'{self.skin.stats_text_alltime}: {format_time(self.data_time_all)}',
             font=self.skin.stats_text_font,
             fill=self.skin.stats_text_colour
         )
@@ -308,7 +354,7 @@ class StatsLayout(Layout):
 
         position += self.skin.stats_subheader_pregap
         # Workouts
-        workout_text = "WORKOUTS: "
+        workout_text = f"{self.skin.stats_subheader_workouts}: "
         draw.text(
             (0, position),
             workout_text,
@@ -393,7 +439,7 @@ class StatsLayout(Layout):
         yoffset = self.skin.cal_number_size[1] // 2
 
         # Draw the weekdays
-        for i, l in enumerate(self.skin.cal_weekday_text):
+        for i, l in enumerate(self.skin.cal_weekday_text.split(',')):
             draw.text(
                 (xpos + xoffset, ypos + yoffset),
                 l,

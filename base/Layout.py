@@ -1,4 +1,7 @@
+import logging
 from io import BytesIO
+
+logger = logging.getLogger(__name__)
 
 
 class Layout:
@@ -9,11 +12,17 @@ class Layout:
         """
         Render this layout and return the result as a bytes string.
         """
+        # import time
+        # starting = time.time()
         with self.draw() as image:
+            # logger.debug(f"Drawing complete after {time.time() - starting} seconds")
             with BytesIO() as data:
-                image.save(data, format='PNG')
+                image.save(data, format='PNG', compress_type=3, compress_level=1)
+                # logger.debug(f"Saving complete after {time.time() - starting} seconds")
                 data.seek(0)
-                return data.getvalue()
+                bytes = data.getvalue()
+                # logger.debug(f"Raw rendering took {time.time() - starting} seconds")
+                return bytes
 
     def close(self):
         """

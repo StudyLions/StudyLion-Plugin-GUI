@@ -1,14 +1,36 @@
 import os
 import math
+import pytz
+import logging
 from PIL import Image, ImageDraw, ImageColor
 from datetime import timedelta, datetime, timezone
 
+from babel.translator import LocalBabel
+from babel.utils import local_month
+
 from ..utils import resolve_asset_path
-from ..base import Card, Layout, fielded, Skin
+from ..base import Card, Layout, fielded, Skin, CardMode
 from ..base.Skin import (
     AssetField, RGBAAssetField, AssetPathField, BlobField, StringField, NumberField, PointField, RawField,
-    FontField, ColourField, ComputedField, FieldDesc
+    FontField, ColourField, ComputedField, FieldDesc, LazyStringField
 )
+
+logger = logging.getLogger(__name__)
+babel = LocalBabel('weekly-gui')
+_p, _np = babel._p, babel._np
+
+SECONDSINDAY = 60 * 60 * 24
+
+
+def localise_timestamp(timestamp: int, tz: timezone):
+    """
+    Create a datetime object for the given UTC timestamp,
+    localised into the given timezone.
+    """
+    time = datetime.utcfromtimestamp(timestamp)
+    time = time.replace(tzinfo=timezone.utc)
+    time = time.astimezone(tz)
+    return time
 
 
 @fielded
@@ -17,13 +39,39 @@ class WeeklyStatsSkin(Skin):
         'scale': 1  # General size scale to match background resolution
     }
 
+    mode: RawField = CardMode.TEXT
+    font_family: RawField = 'Inter'
+
     background: AssetField = 'weekly/background.png'
 
     # Header
     title_pre_gap: NumberField = 40
-    title_text: StringField = "STUDY HOURS"
+
+    study_title_text: LazyStringField = _p(
+        'skin:weeklystats|mode:study|title',
+        "STUDY HOURS"
+    )
+    voice_title_text: LazyStringField = _p(
+        'skin:weeklystats|mode:voice|title',
+        "VOICE CHANNEL ACTIVITY"
+    )
+    text_title_text: LazyStringField = _p(
+        'skin:weeklystats|mode:text|title',
+        "MESSAGE ACTIVITY"
+    )
+    anki_title_text: LazyStringField = _p(
+        'skin::weeklystats|mode:anki|title',
+        "CARDS REVIEWED"
+    )
+    title_text: ComputedField = lambda skin: {
+        CardMode.STUDY: skin.study_title_text,
+        CardMode.VOICE: skin.voice_title_text,
+        CardMode.TEXT: skin.text_title_text,
+        CardMode.ANKI: skin.anki_title_text,
+    }[skin.mode]
     title_font: FontField = ('ExtraBold', 76)
-    title_size: ComputedField = lambda skin: skin.title_font.getsize(skin.title_text)
+    title_size: ComputedField = lambda skin: skin.title_font.getbbox(skin.title_text)[2:]
+
     title_colour: ColourField = '#DDB21D'
     title_underline_gap: NumberField = 10
     title_underline_width: NumberField = 5
@@ -84,7 +132,11 @@ class WeeklyStatsSkin(Skin):
 
     top_gap: NumberField = 80
 
-    weekdays: RawField = ('M', 'T', 'W', 'T', 'F', 'S', 'S')
+    weekdays_text: LazyStringField = _p(
+        'skin:weeklystats|weekdays',
+        "M,T,W,T,F,S,S"
+    )
+    weekdays: ComputedField = lambda skin: skin.weekdays_text.split(',')
 
     # Bottom
     btm_bar_horiz_colour: ColourField = "#052B3B93"
@@ -148,9 +200,30 @@ class WeeklyStatsSkin(Skin):
 
     # Summary
     summary_pre_gap: NumberField = 50
-
     summary_mask: AssetField = 'weekly/summary_mask.png'
 
+    study_this_week_text: LazyStringField = _p(
+        'skin:weeklystats|mode:study|summary:this_week',
+        "THIS WEEK: {amount} HOURS"
+    )
+    voice_this_week_text: LazyStringField = _p(
+        'skin:weeklystats|mode:voice|summary:this_week',
+        "THIS WEEK: {amount} HOURS"
+    )
+    text_this_week_text: LazyStringField = _p(
+        'skin:weeklystats|mode:text|summary:this_week',
+        "THIS WEEK: {amount} MESSAGES"
+    )
+    anki_this_week_text: LazyStringField = _p(
+        'skin:weeklystats|mode:text|summary:this_week',
+        "THIS WEEK: {amount} CARDS"
+    )
+    this_week_text: ComputedField = lambda skin: {
+        CardMode.STUDY: skin.study_this_week_text,
+        CardMode.VOICE: skin.voice_this_week_text,
+        CardMode.TEXT: skin.text_this_week_text,
+        CardMode.ANKI: skin.anki_this_week_text,
+    }[skin.mode]
     this_week_font: FontField = ('Light', 23)
     this_week_colour: ColourField = '#BABABA'
     this_week_image: BlobField = FieldDesc(
@@ -162,6 +235,28 @@ class WeeklyStatsSkin(Skin):
 
     summary_sep: NumberField = 300
 
+    study_last_week_text: LazyStringField = _p(
+        'skin:weeklystats|mode:study|summary:last_week',
+        "LAST WEEK: {amount} HOURS"
+    )
+    voice_last_week_text: LazyStringField = _p(
+        'skin:weeklystats|mode:voice|summary:last_week',
+        "LAST WEEK: {amount} HOURS"
+    )
+    text_last_week_text: LazyStringField = _p(
+        'skin:weeklystats|mode:text|summary:last_week',
+        "LAST WEEK: {amount} MESSAGES"
+    )
+    anki_last_week_text: LazyStringField = _p(
+        'skin:weeklystats|mode:text|summary:last_week',
+        "LAST WEEK: {amount} CARDS"
+    )
+    last_week_text: ComputedField = lambda skin: {
+        CardMode.STUDY: skin.study_last_week_text,
+        CardMode.VOICE: skin.voice_last_week_text,
+        CardMode.TEXT: skin.text_last_week_text,
+        CardMode.ANKI: skin.anki_last_week_text,
+    }[skin.mode]
     last_week_font: FontField = ('Light', 23)
     last_week_colour: ColourField = '#BABABA'
     last_week_image: BlobField = FieldDesc(
@@ -172,106 +267,133 @@ class WeeklyStatsSkin(Skin):
     )
 
     # Date text
+    footer_text: LazyStringField = _p(
+        'skin:weeklystats|footer',
+        "Weekly Statistics • As of {day} {month} • {name} {discrim}"
+    )
     footer_font: FontField = ('Bold', 28)
     footer_colour: ColourField = '#6f6e6f'
     footer_gap: NumberField = 50
 
 
 class WeeklyStatsPage(Layout):
-    def __init__(self, skin, name, discrim, sessions, date):
+    def __init__(
+        self,
+        skin: WeeklyStatsSkin,
+        user: tuple[str, str], timezone: str,
+        now: int, week: int,
+        daily: list[float], sessions: list[tuple[int, int]],
+        **kwargs
+    ):
         """
-        `sessions` is a list of study sessions from the last two weeks.
+        skin: WeeklyStatsSkin
+        user: tuple[str, str]
+            Name and discriminator of the user who owns this card.
+        timezone: str
+            A valid pytz timezone to localise the sessions.
+        now: int
+            The UTC timestamp at which the data was calculated.
+        week: int
+            The UTC timestamp of the start of the week.
+        daily: list[float]
+            List of 14 integers describing totals for each day of last week and this week.
+        sessions: list[tuple[int, int]]
+            List of (start_ts, end_ts) tuples describing each session through this and last week, in ascending order.
+            This is used to create the timeline (bottom) graph.
+            This is not used for summary statistics.
         """
         self.skin = skin
 
+        # Save the raw data
+        self.data_name, self.data_discrim = user
+        self.data_timezone = timezone
+        self.data_now = now
+        self.data_week = week
+        self.data_daily = daily
         self.data_sessions = sessions
-        self.data_date = date
 
-        self.data_name = name
-        self.data_discrim = discrim
+        # The user's timezone
+        self.timezone = pytz.timezone(timezone)
+        self.now = datetime.utcfromtimestamp(now).replace(tzinfo=pytz.utc).astimezone(self.timezone)
 
-        self.week_start = date - timedelta(days=date.weekday())
-        self.last_week_start = self.week_start - timedelta(days=7)
+        # The start times of each of 15 days, localised into the correct timezone, starting from last fortnight.
+        week_start = datetime.utcfromtimestamp(week).replace(tzinfo=pytz.utc).astimezone(self.timezone)
+        self.day_starts = [
+            week_start + timedelta(days=diff)
+            for diff in range(-7, 8)
+        ]
+        logger.debug(f"Day starts: {self.day_starts}, timezone {self.timezone}, provided {timezone}")
 
-        periods = []
-        times = []
+        self.periods = self.extract_periods()
 
-        day_start = self.last_week_start
-        day_time = 0
-        day_periods = []
-        current_period = []
-        i = 0
-        while i < len(sessions):
-            start, end = sessions[i]
-            i += 1
-
-            day_end = day_start + timedelta(hours=24)
-
-            if end < day_start:
-                continue
-
-            if start < day_start:
-                start = day_start
-            elif start >= day_end:
-                if current_period:
-                    day_periods.append(current_period)
-                periods.append(day_periods)
-                times.append(day_time)
-                current_period = []
-                day_periods = []
-                day_time = 0
-                day_start = day_end
-                i -= 1
-                continue
-
-            if (ended_after := (end - day_end).total_seconds()) > 0:
-                if ended_after > 60 * 20:
-                    end = day_end
-                else:
-                    end = day_end - timedelta(minutes=1)
-
-            day_time += (end - start).total_seconds()
-            if not current_period:
-                current_period = [start, end]
-            elif (start - current_period[1]).total_seconds() < 60 * 60:
-                current_period[1] = end
-            else:
-                day_periods.append(current_period)
-                current_period = [start, end]
-
-            if ended_after > 0:
-                if current_period:
-                    day_periods.append(current_period)
-                periods.append(day_periods)
-                times.append(day_time)
-                current_period = []
-                day_periods = []
-                day_time = 0
-                day_start = day_end
-
-                if ended_after > 60 * 20:
-                    i -= 1
-
-        if current_period:
-            day_periods.append(current_period)
-        periods.append(day_periods)
-        times.append(day_time)
-
-        self.data_periods = periods
-        for i in range(len(periods), 14):
-            periods.append([])
-        self.data_hours = [time / 3600 for time in times]
-        for i in range(len(self.data_hours), 14):
-            self.data_hours.append(0)
-
+        # Top graph labels and scale
+        self.max_daily = (4 * math.ceil(max(self.data_daily) / 4)) or 4
         self.date_labels = [
-            (self.week_start + timedelta(days=i)).strftime('%d/%m')
+            (week_start + timedelta(days=i)).strftime('%d/%m')
             for i in range(0, 7)
         ]
 
-        self.max_hour_label = (4 * math.ceil(max(self.data_hours) / 4)) or 4
-
+        # Drawing state
         self.image = None
+
+    def extract_periods(self) -> list[list[tuple[int, int]]]:
+        """
+        Extract a list of daily activity periods from the session data.
+        """
+        # Ensure the sessions are start-time sorted
+        sessions = sorted(self.data_sessions, key=lambda tup: tup[0])
+
+        periods = [[] for _ in range(14)]
+        day = 0  # Index of the current day, relative to start of fortnight, from 0 to 13
+        i = 0  # Index of the current session in the session list
+        last_period = None  # Previous period read for the current day
+
+        while i < len(sessions) and day < 14:
+            session = sessions[i]
+            start = localise_timestamp(session[0], self.timezone)
+            end = localise_timestamp(session[1], self.timezone)
+            day_start, day_end = self.day_starts[day:day+2]
+
+            if end <= day_start:
+                # Prehistoric session, ignore
+                i += 1
+            elif start >= day_end:
+                # Advance to next day
+                day += 1
+                last_period = None
+            else:
+                # We have a valid period to add in this day
+                # Intersect session with day
+                logger.debug(f"Adding {start} to {end}")
+                period = (
+                    (start.hour * 3600 + start.minute * 60 + start.second) if start > day_start else 0,
+                    (end.hour * 3600 + end.minute * 60 + end.second) if end <= day_end else SECONDSINDAY
+                )
+                if last_period is not None and last_period[1] >= period[0] - 30 * 60:
+                    period = (
+                        min(last_period[0], period[0]),
+                        max(last_period[1], period[1])
+                    )
+                    periods[day][-1] = period
+                    logger.debug(f"Modified last period: {period}")
+                else:
+                    periods[day].append(period)
+                    logger.debug(f"Added period: {period}")
+
+                last_period = period
+
+                if end <= day_end:
+                    # Consumed this session, move to next session
+                    i += 1
+                else:
+                    last_period = None
+                    day += 1
+
+        # Clear any periods that are under 20 minutes long
+        for day_periods in periods:
+            day_periods = [period for period in day_periods if period[1] - period[0] > 20 * 60]
+
+        return periods
 
     def draw(self) -> Image:
         image = self.skin.background
@@ -329,8 +451,11 @@ class WeeklyStatsPage(Layout):
         # Draw the footer
         ypos = image.height
         ypos -= self.skin.footer_gap
-        date_text = self.data_date.strftime(
-            "Weekly Statistics • As of %d %b • {} {}".format(self.data_name, self.data_discrim)
+        date_text = self.skin.footer_text.format(
+            day=self.now.day,
+            month=local_month(self.now.month, short=True),
+            name=self.data_name,
+            discrim=self.data_discrim
         )
         size = self.skin.footer_font.getsize(date_text)
         ypos -= size[1]
@@ -343,9 +468,9 @@ class WeeklyStatsPage(Layout):
         return image
 
     def draw_summaries(self) -> Image:
-        this_week_text = " THIS WEEK: {} Hours".format(int(sum(self.data_hours[7:])))
+        this_week_text = ' ' + self.skin.this_week_text.format(amount=int(sum(self.data_daily[7:])))
         this_week_length = int(self.skin.this_week_font.getlength(this_week_text))
-        last_week_text = " LAST WEEK: {} Hours".format(int(sum(self.data_hours[:7])))
+        last_week_text = ' ' + self.skin.last_week_text.format(amount=int(sum(self.data_daily[:7])))
         last_week_length = int(self.skin.last_week_font.getlength(last_week_text))
 
         image = Image.new(
@@ -390,24 +515,47 @@ class WeeklyStatsPage(Layout):
         )
         return image
 
+    def draw_hours_bg(self) -> Image:
+        """
+        Draw a dynamically sized blob for the background of the hours axis in the top graph.
+        """
+        blob = self.skin.top_hours_bg
+        font = self.skin.top_hours_font
+
+        labels = list(int(i * self.max_daily // 4) for i in range(0, 5))
+        max_width = int(max(font.getlength(str(label)) for label in labels))
+        window = int(blob.width * 5/8)
+
+        if max_width > window:
+            shift = max_width - window
+
+            image = Image.new('RGBA', (blob.width + shift, blob.height))
+            image.paste(blob, (0, 0))
+            image.alpha_composite(blob, (shift, 0))
+        else:
+            image = blob
+
+        return image
+
     def draw_top(self) -> Image:
+        top_hours_bg = self.draw_hours_bg()
         size_x = (
-            self.skin.top_hours_bg.width // 2 + self.skin.top_hours_sep
+            top_hours_bg.width // 2 + self.skin.top_hours_sep
             + 6 * self.skin.top_grid_x + self.skin.top_bar_mask.width // 2
-            + self.skin.top_hours_bg.width // 2
+            + top_hours_bg.width // 2
         )
         size_y = (
-            self.skin.top_hours_bg.height // 2 + 4 * self.skin.top_grid_y + self.skin.top_weekday_pre_gap
+            top_hours_bg.height // 2 + 4 * self.skin.top_grid_y + self.skin.top_weekday_pre_gap
             + self.skin.top_weekday_height + self.skin.top_weekday_gap + self.skin.top_date_height
         )
         image = Image.new('RGBA', (size_x, size_y))
         draw = ImageDraw.Draw(image)
 
-        x0 = self.skin.top_hours_bg.width // 2 + self.skin.top_hours_sep
-        y0 = self.skin.top_hours_bg.height // 2 + 4 * self.skin.top_grid_y
+        x0 = top_hours_bg.width // 2 + self.skin.top_hours_sep
+        y0 = top_hours_bg.height // 2 + 4 * self.skin.top_grid_y
 
         # Draw lines and numbers
-        labels = list(int(i * self.max_hour_label // 4) for i in range(0, 5))
+        labels = list(int(i * self.max_daily // 4) for i in range(0, 5))
 
         xpos = x0 - self.skin.top_hours_sep
         ypos = y0
@@ -418,11 +566,11 @@ class WeeklyStatsPage(Layout):
                 fill=self.skin.top_line_colour
             )
 
-            image.alpha_composite(
-                self.skin.top_hours_bg,
-                (xpos - self.skin.top_hours_bg.width // 2, ypos - self.skin.top_hours_bg.height // 2)
-            )
             text = str(label)
+            image.alpha_composite(
+                top_hours_bg,
+                (xpos - top_hours_bg.width // 2, ypos - top_hours_bg.height // 2)
+            )
             draw.text(
                 (xpos, ypos),
                 text,
@@ -453,16 +601,16 @@ class WeeklyStatsPage(Layout):
             xpos += self.skin.top_grid_x
 
         # Draw bars
-        for i, (last_hours, this_hours) in enumerate(zip(self.data_hours[:7], self.data_hours[7:])):
+        for i, (last_hours, this_hours) in enumerate(zip(self.data_daily[:7], self.data_daily[7:])):
             day = i % 7
             xpos = x0 + day * self.skin.top_grid_x
 
             for draw_last in (last_hours > this_hours, not last_hours > this_hours):
                 hours = last_hours if draw_last else this_hours
-                height = (4 * self.skin.top_grid_y) * (hours / self.max_hour_label)
+                height = (4 * self.skin.top_grid_y) * (hours / self.max_daily)
                 height = int(height)
 
-                if height >= 2 * self.skin.top_bar_mask.width:
+                if height >= self.skin.top_grid_y / 4:
                     bar = self.draw_vertical_bar(
                         height,
                         self.skin.top_last_bar_full if draw_last else self.skin.top_this_bar_full,
@@ -580,22 +728,18 @@ class WeeklyStatsPage(Layout):
             )
 
         # Draw the sessions
-        seconds_in_day = 60 * 60 * 24
+        seconds_in_day = SECONDSINDAY
         day_width = 24 * self.skin.btm_grid_x
-        for i, day in enumerate(reversed(self.data_periods)):
+        for i, day in enumerate(reversed(self.periods)):
             last = (i // 7)
             ypos = y0 + (6 - i % 7) * self.skin.btm_grid_y
 
             for start, end in day:
-                if end <= start:
-                    continue
-                day_start = start.replace(hour=0, minute=0, second=0, microsecond=0)
+                flat_start = (start == 0)
+                duration = end - start
+                xpos = x0 + int(start / seconds_in_day * day_width)
 
-                flat_start = (start == day_start)
-                duration = (end - start).total_seconds()
-                xpos = x0 + int((start - day_start).total_seconds() / seconds_in_day * day_width)
-
-                flat_end = (end == day_start + timedelta(days=1))
+                flat_end = (end == seconds_in_day)
 
                 if flat_end:
                     width = image.width - xpos
@@ -616,8 +760,8 @@ class WeeklyStatsPage(Layout):
 
         # Draw the emojis
         xpos = x0 - self.skin.btm_grid_x // 2
-        average_study = sum(self.data_hours[7:]) / 7
-        for i, hours in enumerate(self.data_hours[7:]):
+        average_study = sum(self.data_daily[7:]) / 7
+        for i, hours in enumerate(self.data_daily[7:]):
             if hours:
                 ypos = y0 + i * self.skin.btm_grid_y
                 relative = hours / average_study
@@ -688,7 +832,9 @@ class WeeklyStatsCard(Card):
     async def sample_args(cls, ctx, **kwargs):
         import random
         sessions = []
-        day_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        now = datetime.now(tz=timezone.utc)
+        day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        week_start = day_start - timedelta(days=day_start.weekday())
         day_start -= timedelta(hours=24) * 14
         for day in range(0, 14):
             day_start += timedelta(hours=24)
@@ -698,16 +844,20 @@ class WeeklyStatsCard(Card):
             while pointer < 20 * 60:
                 session_duration = int(abs(random.normalvariate(4 * 60, 1 * 60)))
                 sessions.append((
-                    day_start + timedelta(minutes=pointer),
-                    day_start + timedelta(minutes=(pointer + session_duration)),
-                )
-                )
+                    int((day_start + timedelta(minutes=pointer)).timestamp()),
+                    int((day_start + timedelta(minutes=(pointer + session_duration))).timestamp()),
+                ))
                 pointer += session_duration
                 pointer += int(abs(random.normalvariate(2.5 * 60, 1 * 60)))
 
         return {
-            'name': ctx.author.name if ctx else "John Doe",
-            'discrim': ('#' + ctx.author.discriminator) if ctx else "#0000",
+            'user': (
+                ctx.author.name if ctx else "John Doe",
+                ('#' + ctx.author.discriminator) if ctx else "#0000"
+            ),
+            'timezone': 'UTC',
+            'now': int(now.timestamp()),
+            'week': int(week_start.timestamp()),
+            'daily': [12 * i for i in [6, 8, 4.5, 7, 9, 2, 0, 1, 2, 5, 9, 3, 10, 10]],
             'sessions': sessions,
-            'date': datetime.now(timezone.utc).replace(hour=0, minute=0, second=0)
         }
