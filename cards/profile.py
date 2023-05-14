@@ -1,13 +1,20 @@
+import logging
 from io import BytesIO
 from PIL import Image, ImageDraw
 
+from babel.translator import LocalBabel
+
 from ..utils import get_avatar_key
-from ..base import Card, Layout, fielded, Skin, FieldDesc
+from ..base import Card, Layout, fielded, Skin, FieldDesc, CardMode
 from ..base.Avatars import avatar_manager
 from ..base.Skin import (
     AssetField, RGBAAssetField, AssetPathField, NumberField, BlobField,
-    FontField, ColourField, PointField, ComputedField
+    FontField, ColourField, PointField, ComputedField, RawField, LazyStringField
 )
+
+logger = logging.getLogger(__name__)
+babel = LocalBabel('profile-gui')
+_p = babel._p
 
 
 @fielded
@@ -15,6 +22,9 @@ class ProfileSkin(Skin):
     _env = {
         'scale': 2  # General size scale to match background resolution
     }
+
+    mode: RawField = CardMode.TEXT
+    font_family: RawField = 'Inter'
 
     # Background images
     bg_path: AssetField = "profile/background.png"
@@ -64,9 +74,17 @@ class ProfileSkin(Skin):
     column_sep: NumberField = 20
 
     # Column 2
+    subheader_profile_text: LazyStringField = _p(
+        'skin:profile|header:profile',
+        "PROFILE"
+    )
+    subheader_achievements_text: LazyStringField = _p(
+        'skin:profile|header:achievements',
+        "ACHIEVEMENTS"
+    )
     subheader_font: FontField = ('Black', 27)
     subheader_colour: ColourField = '#DDB21D'
-    subheader_height: ComputedField = lambda skin: skin.subheader_font.getsize('PROFILE')[1]
+    subheader_height: ComputedField = lambda skin: skin.subheader_font.getsize(skin.subheader_profile_text)[1]
     subheader_gap: NumberField = 15
 
     col2_size: ComputedField = lambda skin: (
@@ -111,6 +129,22 @@ class ProfileSkin(Skin):
     )
 
     # Rank section
+    rank_unranked_text: LazyStringField = _p(
+        'skin:profile|field:rank_unranked_text',
+        "UNRANKED"
+    )
+    rank_nextrank_text: LazyStringField = _p(
+        'skin:profile|field:rank_nextrank_text',
+        "NEXT RANK: {name} {rangestr}"
+    )
+    rank_noranks_text: LazyStringField = _p(
+        'skin:profile|field:rank_noranks_text',
+        "NO RANKS AVAILABLE"
+    )
+    rank_maxrank_text: LazyStringField = _p(
+        'skin:profile|field:rank_maxrank_text',
+        "YOU HAVE REACHED THE MAXIMUM RANK"
+    )
     rank_name_font: FontField = ('Black', 23)
     rank_name_colour: ColourField = '#DDB21D'
     rank_name_height: ComputedField = lambda skin: skin.rank_name_font.getsize('VAMPIRE')[1]
@@ -149,35 +183,32 @@ class ProfileSkin(Skin):
 
 
 class ProfileLayout(Layout):
-    def __init__(self, skin, name, discrim,
-                 coins, time, gems, gifts,
-                 avatar,
-                 badges=(),
+    def __init__(self, skin,
+                 user, avatar,
+                 coins, gems, gifts,
+                 profile_badges=(),
                  achievements=(),
                  current_rank=None,
+                 rank_progress=0,
                  next_rank=None,
                  draft=False, **kwargs):
-
         self.skin = skin
 
         self.draft = draft
 
-        self.data_name = name
-        self.data_discrim = discrim
-
+        self.data_name, self.data_discrim = user
         self.data_avatar = avatar
 
         self.data_coins = coins
-        self.data_time = time
-        self.data_hours = self.data_time / 3600
         self.data_gems = gems
         self.data_gifts = gifts
 
-        self.data_badges = badges
+        self.data_badges = profile_badges
         self.data_achievements = achievements
 
         self.data_current_rank = current_rank
         self.data_next_rank = next_rank
+        self.data_rank_progress = rank_progress
 
         self.image: Image = None  # Final Image
 
@@ -353,7 +384,7 @@ class ProfileLayout(Layout):
         # Draw subheader
         draw.text(
             (0, position),
-            'PROFILE',
+            self.skin.subheader_profile_text,
             font=self.skin.subheader_font,
             fill=self.skin.subheader_colour
         )
@@ -432,7 +463,7 @@ class ProfileLayout(Layout):
         # Draw subheader
         draw.text(
             (0, position),
-            'ACHIEVEMENTS',
+            self.skin.subheader_achievements_text,
             font=self.skin.subheader_font,
             fill=self.skin.subheader_colour
         )
@@ -472,10 +503,11 @@ class ProfileLayout(Layout):
             draw.rectangle(((0, 0), (self.skin.rank_size[0]-1, self.skin.rank_size[1]-1)))
 
         position = 0
+        progress = self.data_rank_progress
 
         # Draw the current rank
         if self.data_current_rank:
-            rank_name, hour_1, hour_2 = self.data_current_rank
+            rank_name, rank_text = self.data_current_rank
 
             xposition = 0
             draw.text(
@@ -484,23 +516,14 @@ class ProfileLayout(Layout):
                 font=self.skin.rank_name_font,
                 fill=self.skin.rank_name_colour,
             )
+
             name_size = self.skin.rank_name_font.getsize(rank_name + ' ')
             position += name_size[1]
             xposition += name_size[0]
 
-            if hour_2:
-                progress = (self.data_hours - hour_1) / (hour_2 - hour_1)
-                if hour_1:
-                    hour_str = '{} - {}h'.format(hour_1, hour_2)
-                else:
-                    hour_str = '≤{}h'.format(hour_2)
-            else:
-                progress = 1
-                hour_str = '≥{}h'.format(hour_1)
-
             draw.text(
                 (xposition, position),
-                hour_str,
+                rank_text,
                 font=self.skin.rank_hours_font,
                 fill=self.skin.rank_hours_colour,
                 anchor='lb'
@@ -509,12 +532,11 @@ class ProfileLayout(Layout):
         else:
             draw.text(
                 (0, position),
-                'UNRANKED',
+                self.skin.rank_unranked_text,
                 font=self.skin.rank_name_font,
                 fill=self.skin.rank_name_colour,
             )
             position += self.skin.rank_name_height + self.skin.bar_gap
-            progress = 0
 
         # Draw rankbar
         rankbar = self.draw_rankbar(progress)
@@ -526,20 +548,15 @@ class ProfileLayout(Layout):
 
         # Draw next rank text
         if self.data_next_rank:
-            rank_name, hour_1, hour_2 = self.data_next_rank
-            if hour_2:
-                if hour_1:
-                    hour_str = '{} - {}h'.format(hour_1, hour_2)
-                else:
-                    hour_str = '≤{}h'.format(hour_2)
-            else:
-                hour_str = '≥{}h'.format(hour_1)
-            rank_str = "NEXT RANK: {} {}".format(rank_name, hour_str)
+            rank_name, rank_text = self.data_next_rank
+            rank_str = self.skin.rank_nextrank_text.format(
+                name=rank_name, rankstr=rank_text
+            )
         else:
             if self.data_current_rank:
-                rank_str = "YOU HAVE REACHED THE MAXIMUM RANK!"
+                rank_str = self.skin.rank_maxrank_text
             else:
-                rank_str = "NO RANKS AVAILABLE!"
+                rank_str = self.skin.rank_noranks_text
 
         draw.text(
             (0, position),
@@ -603,11 +620,12 @@ class ProfileCard(Card):
     @classmethod
     async def sample_args(cls, ctx, **kwargs):
         return {
-            'name': ctx.author.name if ctx else 'John Doe',
-            'discrim': ('#' + ctx.author.discriminator) if ctx else '#0000',
+            'user': (
+                ctx.author.name if ctx else 'John Doe',
+                ('#' + ctx.author.discriminator) if ctx else '#0000'
+            ),
             'avatar': get_avatar_key(ctx.client, ctx.author.id) if ctx else (0, None),
             'coins': 58596,
-            'time': 3750 * 3600,
             'gems': 10000,
             'gifts': 100,
             'badges': (
@@ -618,6 +636,7 @@ class ProfileCard(Card):
                 'LOVES CATS <3'
             ),
             'achievements': (0, 2, 5, 7),
-            'current_rank': ('VAMPIRE', 3000, 4000),
-            'next_rank': ('WIZARD', 4000, 8000),
+            'current_rank': ('VAMPIRE', "3000 - 4000h"),
+            'rank_progress': 0.5,
+            'next_rank': ('WIZARD', "4000 - 8000h"),
         }

@@ -1,13 +1,20 @@
 import asyncio
+import logging
 from io import BytesIO
 from PIL import Image, ImageDraw
 
-from ..base import Card, Layout, fielded, Skin, FieldDesc
+from babel.translator import LocalBabel
+
+from ..base import Card, Layout, fielded, Skin, FieldDesc, CardMode
 from ..base.Avatars import avatar_manager
 from ..base.Skin import (
     AssetField, RGBAAssetField, AssetPathField, BlobField, StringField, NumberField,
-    FontField, ColourField, ComputedField
+    FontField, ColourField, ComputedField, RawField, LazyStringField
 )
+
+logger = logging.getLogger(__name__)
+babel = LocalBabel('leaderboard-gui')
+_p, _np = babel._p, babel._np
 
 
 class LeaderboardEntry:
@@ -52,8 +59,32 @@ class LeaderboardSkin(Skin):
         'scale': 2  # General size scale to match background resolution
     }
 
+    mode: RawField = CardMode.STUDY
+    font_family: RawField = 'Inter'
+
     header_text_pre_gap: NumberField = 20
-    header_text: StringField = "STUDY TIME LEADERBOARD"
+    study_header_text: LazyStringField = _p(
+        'skin:leaderboard|mode:study|header_text',
+        "STUDY TIME LEADERBOARD"
+    )
+    text_header_text: LazyStringField = _p(
+        'skin:leaderboard|mode:text|header_text',
+        "MESSAGE LEADERBOARD"
+    )
+    voice_header_text: LazyStringField = _p(
+        'skin:leaderboard|mode:voice|header_text',
+        "VOICE LEADERBOARD"
+    )
+    anki_header_text: LazyStringField = _p(
+        'skin:leaderboard|mode:anki|header_text',
+        "ANKI REVIEW LEADERBOARD"
+    )
+    header_text: ComputedField = lambda skin: {
+        CardMode.STUDY: skin.study_header_text,
+        CardMode.VOICE: skin.voice_header_text,
+        CardMode.TEXT: skin.text_header_text,
+        CardMode.ANKI: skin.anki_header_text,
+    }[skin.mode]
     header_text_font: FontField = ('ExtraBold', 80)
     header_text_size: ComputedField = lambda skin: skin.header_text_font.getsize(skin.header_text)
     header_text_colour: ColourField = '#DDB21D'
@@ -88,6 +119,28 @@ class LeaderboardSkin(Skin):
     top_position_colour: ColourField = '#FFFFFF'
     top_name_font: FontField = ('Bold', 30)
     top_name_colour: ColourField = '#DDB21D'
+    study_top_hours_text: LazyStringField = _p(
+        'skin:leaderboard|mode:study|top_hours_text',
+        "{amount} hours"
+    )
+    text_top_hours_text: LazyStringField = _p(
+        'skin:leaderboard|mode:text|top_hours_text',
+        "{amount} XP"
+    )
+    voice_top_hours_text: LazyStringField = _p(
+        'skin:leaderboard|mode:voice|top_hours_text',
+        "{amount} hours"
+    )
+    anki_top_hours_text: LazyStringField = _p(
+        'skin:leaderboard|mode:anki|top_hours_text',
+        "{amount} cards"
+    )
+    top_hours_text: ComputedField = lambda skin: {
+        CardMode.STUDY: skin.study_top_hours_text,
+        CardMode.VOICE: skin.voice_top_hours_text,
+        CardMode.TEXT: skin.text_top_hours_text,
+        CardMode.ANKI: skin.anki_top_hours_text,
+    }[skin.mode]
     top_hours_font: FontField = ('Medium', 30)
     top_hours_colour: ColourField = '#FFFFFF'
     top_text_sep: NumberField = 5
@@ -134,7 +187,7 @@ class LeaderboardSkin(Skin):
 
 
 class LeaderboardPage(Layout):
-    def __init__(self, skin, server_name, entries, highlight=None):
+    def __init__(self, skin, server_name, entries, highlight=None, **kwargs):
         self.skin = skin
 
         self.server_name = server_name
@@ -195,9 +248,10 @@ class LeaderboardPage(Layout):
             anchor='mt'
         )
         text_y += self.skin.top_name_font.getsize(first_entry.name)[1] + self.skin.top_text_sep
+        multip = 3600 if self.skin.mode in (CardMode.VOICE, CardMode.STUDY) else 1
         draw.text(
             (text_x, text_y),
-            "{} hours".format(first_entry.time // 3600),
+            self.skin.top_hours_text.format(amount=first_entry.time // multip),
             font=self.skin.top_hours_font,
             fill=self.skin.top_hours_colour,
             anchor='mt'
@@ -234,7 +288,7 @@ class LeaderboardPage(Layout):
             text_y += self.skin.top_name_font.getsize(second_entry.name)[1] + self.skin.top_text_sep
             draw.text(
                 (text_x, text_y),
-                "{} hours".format(second_entry.time // 3600),
+                self.skin.top_hours_text.format(amount=second_entry.time // multip),
                 font=self.skin.top_hours_font,
                 fill=self.skin.top_hours_colour,
                 anchor='mt'
@@ -271,7 +325,7 @@ class LeaderboardPage(Layout):
             text_y += self.skin.top_name_font.getsize(third_entry.name)[1] + self.skin.top_text_sep
             draw.text(
                 (text_x, text_y),
-                "{} hours".format(third_entry.time // 3600),
+                self.skin.top_hours_text.format(amount=third_entry.time // multip),
                 font=self.skin.top_hours_font,
                 fill=self.skin.top_hours_colour,
                 anchor='mt'

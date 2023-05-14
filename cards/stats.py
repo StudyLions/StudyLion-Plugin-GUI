@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw
 
 from babel.translator import LocalBabel
 
-from ..base import Card, Layout, fielded, Skin
+from ..base import Card, Layout, fielded, Skin, CardMode
 from ..base.Skin import (
     AssetField, BlobField, StringField, NumberField, RawField,
     FontField, ColourField, PointField, ComputedField, FieldDesc,
@@ -41,12 +41,17 @@ def format_time(seconds):
     )
 
 
+def format_xp(count):
+    return f"{count} XP"
+
+
 @fielded
 class StatsSkin(Skin):
     _env = {
         'scale': 2  # General size scale to match background resolution
     }
 
+    mode: RawField = CardMode.TEXT
     font_family: RawField = 'Inter'
 
     # Background images
@@ -68,10 +73,29 @@ class StatsSkin(Skin):
     stats_subheader_leaderboard: LazyStringField = _p(
         'skin:stats|subheader:leaderboard', 'LEADERBOARD POSITION'
     )
-    stats_subheader_study: LazyStringField = _p(
-        'skin:stats|subheader:study',
+    study_stats_subheader_study: LazyStringField = _p(
+        'skin:stats|mode:study|subheader:study',
         'STUDY TIME'
     )
+    voice_stats_subheader_study: LazyStringField = _p(
+        'skin:stats|mode:voice|subheader:study',
+        'VOICE TIME'
+    )
+    text_stats_subheader_study: LazyStringField = _p(
+        'skin:stats|mode:text|subheader:study',
+        'MESSAGES'
+    )
+    anki_stats_subheader_study: LazyStringField = _p(
+        'skin:stats|mode:anki|subheader:study',
+        'CARDS REVIEWED'
+    )
+    stats_subheader_study: ComputedField = lambda skin: {
+        CardMode.STUDY: skin.study_stats_subheader_study,
+        CardMode.VOICE: skin.voice_stats_subheader_study,
+        CardMode.TEXT: skin.text_stats_subheader_study,
+        CardMode.ANKI: skin.anki_stats_subheader_study,
+    }[skin.mode]
+
     stats_subheader_workouts: LazyStringField = _p(
         'skin:stats|subheader:workouts',
         'WORKOUTS'
@@ -121,12 +145,53 @@ class StatsSkin(Skin):
     )
 
     # Second column
-    col2_header: LazyStringField = _p(
-        'skin:stats|header:col2',
-        'STUDY STREAK'
+    study_col2_header: LazyStringField = _p(
+        'skin:stats|mode:study|header:col2',
+        "STUDY STREAK"
     )
+    voice_col2_header: LazyStringField = _p(
+        'skin:stats|mode:voice|header:col2',
+        "VOICE STREAK"
+    )
+    text_col2_header: LazyStringField = _p(
+        'skin:stats|mode:text|header:col2',
+        "ACTIVITY STREAK"
+    )
+    anki_col2_header: LazyStringField = _p(
+        'skin:stats|mode:anki|header:col2',
+        "ANKI REVIEW STREAK"
+    )
+    col2_header: ComputedField = lambda skin: {
+        CardMode.STUDY: skin.study_col2_header,
+        CardMode.VOICE: skin.voice_col2_header,
+        CardMode.TEXT: skin.text_col2_header,
+        CardMode.ANKI: skin.anki_col2_header,
+    }[skin.mode]
     col2_date_font: FontField = ('Black', 21)
     col2_date_colour: ColourField = '#FFFFFF'
+
+    study_col2_hours_text: LazyStringField = _p(
+        'skin:stats|mode:study|field:col2_summary',
+        "{amount} HRS"
+    )
+    voice_col2_hours_text: LazyStringField = _p(
+        'skin:stats|mode:voice|field:col2_summary',
+        "{amount} HRS"
+    )
+    text_col2_hours_text: LazyStringField = _p(
+        'skin:stats|mode:text|field:col2_summary',
+        "{amount} XP"
+    )
+    anki_col2_hours_text: LazyStringField = _p(
+        'skin:stats|mode:anki|field:col2_summary',
+        "{amount} CARDS"
+    )
+    col2_hours_text: ComputedField = lambda skin: {
+        CardMode.STUDY: skin.study_col2_hours_text,
+        CardMode.VOICE: skin.voice_col2_hours_text,
+        CardMode.TEXT: skin.text_col2_hours_text,
+        CardMode.ANKI: skin.anki_col2_hours_text,
+    }[skin.mode]
     col2_hours_colour: ColourField = '#1473A2'
     col2_date_gap: NumberField = 25  # Gap between date line and calender
     col2_subheader_height: ComputedField = lambda skin: skin.col2_date_font.getsize('JANUARY')[1]
@@ -318,9 +383,17 @@ class StatsLayout(Layout):
         )
         position += self.skin.col2_subheader_height + self.skin.stats_text_gap
 
+        if self.skin.mode in (CardMode.VOICE, CardMode.STUDY):
+            formatter = format_time
+        elif self.skin.mode is CardMode.TEXT:
+            formatter = format_xp
+        else:
+            # TODO: ANKI
+            formatter = format_xp
+
         draw.text(
             (0, position),
-            f'{self.skin.stats_text_daily}: {format_time(self.data_time_daily)}',
+            f'{self.skin.stats_text_daily}: {formatter(self.data_time_daily)}',
             font=self.skin.stats_text_font,
             fill=self.skin.stats_text_colour
         )
@@ -328,7 +401,7 @@ class StatsLayout(Layout):
 
         draw.text(
             (0, position),
-            f'{self.skin.stats_text_weekly}: {format_time(self.data_time_weekly)}',
+            f'{self.skin.stats_text_weekly}: {formatter(self.data_time_weekly)}',
             font=self.skin.stats_text_font,
             fill=self.skin.stats_text_colour
         )
@@ -336,7 +409,7 @@ class StatsLayout(Layout):
 
         draw.text(
             (0, position),
-            f'{self.skin.stats_text_monthly}: {format_time(self.data_time_monthly)}',
+            f'{self.skin.stats_text_monthly}: {formatter(self.data_time_monthly)}',
             font=self.skin.stats_text_font,
             fill=self.skin.stats_text_colour
         )
@@ -344,7 +417,7 @@ class StatsLayout(Layout):
 
         draw.text(
             (0, position),
-            f'{self.skin.stats_text_alltime}: {format_time(self.data_time_all)}',
+            f'{self.skin.stats_text_alltime}: {formatter(self.data_time_all)}',
             font=self.skin.stats_text_font,
             fill=self.skin.stats_text_colour
         )
@@ -402,9 +475,14 @@ class StatsLayout(Layout):
             fill=self.skin.col2_date_colour
         )
         xposition = self.skin.col2_date_font.getlength(month_text)
+        if self.skin.mode in (CardMode.STUDY, CardMode.VOICE):
+            hours_month = self.data_time_monthly // 3600
+        else:
+            hours_month = self.data_time_monthly
+        hours_text = self.skin.col2_hours_text.format(amount=hours_month)
         draw.text(
             (xposition, position),
-            f"{self.data_time_monthly // 3600} HRS",
+            hours_text,
             font=self.skin.col2_date_font,
             fill=self.skin.col2_hours_colour
         )

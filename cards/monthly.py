@@ -486,9 +486,9 @@ class MonthlyStatsPage(Layout):
         return image
 
     def draw_summaries(self) -> Image:
-        this_month_text = " THIS MONTH: {} Hours".format(int(sum(self.data_monthly[-1])))
+        this_month_text = ' ' + self.skin.this_month_text.format(amount=int(sum(self.data_monthly[-1])))
         this_month_length = int(self.skin.this_month_font.getlength(this_month_text))
-        last_month_text = " LAST MONTH: {} Hours".format(int(sum(self.data_monthly[-2])))
+        last_month_text = ' ' + self.skin.last_month_text.format(amount=int(sum(self.data_monthly[-2])))
         last_month_length = int(self.skin.last_month_font.getlength(last_month_text))
 
         image = Image.new(
