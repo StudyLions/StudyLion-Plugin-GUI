@@ -1,13 +1,20 @@
 import math
+import logging
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageOps
+
+from babel.translator import LocalBabel
 
 from ..base import Card, Layout, fielded, Skin
 from ..base.Avatars import avatar_manager
 from ..base.Skin import (
-    AssetField, StringField, NumberField,
-    FontField, ColourField, PointField, ComputedField
+    AssetField, LazyStringField, NumberField,
+    FontField, ColourField, PointField, ComputedField, RawField
 )
+
+logger = logging.getLogger(__name__)
+babel = LocalBabel('timer-gui')
+_p = babel._p
 
 
 @fielded
@@ -15,6 +22,8 @@ class _TimerSkin(Skin):
     _env = {
         'scale': 2  # General size scale to match background resolution
     }
+
+    font_family: RawField = 'Inter'
 
     background: AssetField = "timer/background.png"
     main_colour: ColourField
@@ -41,7 +50,7 @@ class _TimerSkin(Skin):
     stage_colour: ColourField = '#FFFFFF'
 
     mic_icon: AssetField
-    stage_text: StringField
+    stage_text: LazyStringField
 
     # Members
     user_bg: AssetField = "timer/break_user.png"
@@ -58,6 +67,10 @@ class _TimerSkin(Skin):
     grid: PointField = (344, 246)
 
     # Date text
+    date_text: LazyStringField = _p(
+        'skin:timer|field:date_text',
+        "Use /now to show what you are working on!"
+    )
     date_font: FontField = ('Bold', 28)
     date_colour: ColourField = '#6f6e6f'
     date_gap: NumberField = 50
@@ -70,7 +83,10 @@ class FocusTimerSkin(_TimerSkin):
     mic_icon: AssetField = "timer/mute.png"
     progress_end: AssetField = "timer/progress_end_focus.png"
     progress_start: AssetField = "timer/progress_start_focus.png"
-    stage_text: StringField = "FOCUS"
+    stage_text: LazyStringField = _p(
+        'skin:timer|stage:focus|field:stage_text',
+        "FOCUS"
+    )
     tag: AssetField = "timer/focus_tag.png"
 
 
@@ -81,18 +97,21 @@ class BreakTimerSkin(_TimerSkin):
     mic_icon: AssetField = "timer/unmute.png"
     progress_end: AssetField = "timer/progress_end_break.png"
     progress_start: AssetField = "timer/progress_start_break.png"
-    stage_text: StringField = "BREAK"
+    stage_text: LazyStringField = _p(
+        'skin:timer|stage:break|field:stage_text',
+        "BREAK"
+    )
     tag: AssetField = "timer/break_tag.png"
 
 
 class TimerLayout(Layout):
-    def __init__(self, skin, name, remaining, duration, users):
+    def __init__(self, skin, name, remaining, duration, users, **kwargs):
         self.skin = skin
 
         self.data_name = name
         self.data_remaining = 5 * math.ceil(remaining / 5)
         self.data_duration = duration
-        self.data_amount = 1 - remaining / duration
+        self.data_amount = 1 - remaining / duration if duration else 0
         self.data_users = sorted(users, key=lambda user: user[1], reverse=True)  # (avatar, time)
 
     @staticmethod
@@ -183,7 +202,7 @@ class TimerLayout(Layout):
         # Draw the footer
         ypos = image.height
         ypos -= self.skin.date_gap
-        date_text = "Use !now [text] to show what you are working on!"
+        date_text = self.skin.date_text
         size = self.skin.date_font.getsize(date_text)
         ypos -= size[1]
         draw.text(
