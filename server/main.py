@@ -143,11 +143,14 @@ async def main():
 
     global executor
     log_app.set("GUI_SERVER")
+    translator = LeoBabel()
+    translator._load()
+    ctx_translator.set(translator)
 
     with logging_context(action='SPAWN'):
-        executor = ProcessPoolExecutor(MAX_PROC)
-        for i in range(MAX_PROC):
-            executor.submit(worker_configurer)
+        executor = ProcessPoolExecutor(MAX_PROC, initializer=worker_configurer)
+        # for i in range(MAX_PROC):
+        #     executor.submit(worker_configurer)
 
     with logging_context(stack=["SERV"]):
         server = await asyncio.start_unix_server(handle_request, PATH)
