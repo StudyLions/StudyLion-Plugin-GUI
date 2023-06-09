@@ -550,7 +550,7 @@ class ProfileLayout(Layout):
         if self.data_next_rank:
             rank_name, rank_text = self.data_next_rank
             rank_str = self.skin.rank_nextrank_text.format(
-                name=rank_name, rankstr=rank_text
+                name=rank_name, rangestr=rank_text
             )
         else:
             if self.data_current_rank:

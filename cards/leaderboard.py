@@ -93,6 +93,10 @@ class LeaderboardSkin(Skin):
     header_text_line_width: NumberField = 0
     header_text_line_gap: NumberField = 20
 
+    subheader_server_text: LazyStringField = _p(
+        'skin:leaderboard|field:subheader_text',
+        "SERVER: "
+    )
     subheader_name_font: FontField = ('SemiBold', 27)
     subheader_name_colour: ColourField = '#FFFFFF'
     subheader_value_font: FontField = ('Regular', 27)
@@ -485,7 +489,7 @@ class LeaderboardPage(Layout):
         # ypos += self.skin.header_text_line_gap
 
         # Draw the subheader
-        text_name = "SERVER: "
+        text_name = self.skin.subheader_server_text
         text_name_width = self.skin.subheader_name_font.getlength(text_name)
         text_value = self.server_name
         text_value_width = self.skin.subheader_value_font.getlength(text_value)
