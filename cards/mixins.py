@@ -76,12 +76,13 @@ class MiniProfileLayout:
             fill=self.skin.mini_profile_name_colour,
             font=self.skin.mini_profile_name_font
         )
-        draw.text(
-            (xpos + name_length, ypos),
-            self.data_discrim,
-            fill=self.skin.mini_profile_discrim_colour,
-            font=self.skin.mini_profile_discrim_font
-        )
+        if self.data_discrim:
+            draw.text(
+                (xpos + name_length, ypos),
+                self.data_discrim,
+                fill=self.skin.mini_profile_discrim_colour,
+                font=self.skin.mini_profile_discrim_font
+            )
         ypos += name_height + self.skin.mini_profile_name_gap
 
         # Draw badges
@@ -104,7 +105,7 @@ class MiniProfileLayout:
         """
         Draw a single profile badge, with the given text.
         """
-        text_length = self.skin.mini_profile_badge_font.getlength(text)
+        text_length = int(self.skin.mini_profile_badge_font.getlength(text))
 
         height = self.skin.mini_profile_badge_end.height
         width = text_length + self.skin.mini_profile_badge_end.width

@@ -163,6 +163,28 @@ class LeaderboardSkin(Skin):
     entry_hours_highlight_colour: ColourField = '#FFFFFF'
     entry_name_font: FontField = ("SemiBold", 45)
     entry_name_colour: ColourField = '#FFFFFF'
+    study_entry_hours_text: LazyStringField = _p(
+        'skin:leaderboard|mode:study|entry_hours_text',
+        "{HH:.02d}:{MM:.02d}"
+    )
+    text_entry_hours_text: LazyStringField = _p(
+        'skin:leaderboard|mode:text|entry_hours_text',
+        "{amount} XP"
+    )
+    voice_entry_hours_text: LazyStringField = _p(
+        'skin:leaderboard|mode:voice|entry_hours_text',
+        "{HH}:{MM}"
+    )
+    anki_entry_hours_text: LazyStringField = _p(
+        'skin:leaderboard|mode:anki|entry_hours_text',
+        "{amount} cards"
+    )
+    entry_hours_text: ComputedField = lambda skin: {
+        CardMode.STUDY: skin.study_entry_hours_text,
+        CardMode.VOICE: skin.voice_entry_hours_text,
+        CardMode.TEXT: skin.text_entry_hours_text,
+        CardMode.ANKI: skin.anki_entry_hours_text,
+    }[skin.mode]
     entry_hours_font: FontField = ("SemiBold", 45)
     entry_hours_colour: ColourField = '#FFFFFF'
     entry_position_at: NumberField = 200
@@ -426,10 +448,10 @@ class LeaderboardPage(Layout):
         )
 
         # Write time
-        # TODO: Entry format for different leaderboard types
-        time_str = "{:02d}:{:02d}".format(
-            entry.time // 3600,
-            (entry.time % 3600) // 60
+        time_str = self.skin.entry_hours_text.format(
+            HH=entry.time // 3600,
+            MM=(entry.time % 3600) // 60,
+            amount=entry.time,
         )
         draw.text(
             (image.width + self.skin.entry_time_at, ypos),

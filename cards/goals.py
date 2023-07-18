@@ -33,7 +33,7 @@ class _GoalSkin(Skin):
 
     background: AssetField = "goals/background.png"
 
-    help_frame: AssetField = None
+    # help_frame: AssetField = None
 
     # Title section
     title_pre_gap: NumberField = 40
@@ -225,7 +225,7 @@ class _GoalSkin(Skin):
     # Date text
     footer_text: LazyStringField = _p(
         'skin:goals|footer',
-        "As of {day} {month} • {name} {discrim}"
+        "As of {day} {month} • {name}"
     )
     footer_pre_gap: NumberField = 25
     footer_font: FontField = ('Bold', 28)
@@ -244,7 +244,7 @@ class WeeklyGoalSkin(_GoalSkin):
         "GOALS OF THE WEEK"
     )
 
-    help_frame: AssetField = "weekly/help_frame.png"
+    # help_frame: AssetField = "weekly/help_frame.png"
 
 
 @fielded
@@ -258,7 +258,7 @@ class MonthlyGoalSkin(_GoalSkin):
         "GOALS OF THE MONTH"
     )
 
-    help_frame: AssetField = "monthly/help_frame.png"
+    # help_frame: AssetField = "monthly/help_frame.png"
 
 
 class GoalPage(Layout, MiniProfileLayout):
@@ -357,7 +357,9 @@ class GoalPage(Layout, MiniProfileLayout):
             - stopwatch + (stopwatch := time.time()), stopwatch - starting
         ))
 
-        if self.data_goals or self.data_tasks_goal or self.data_studied_goal:
+        # if self.data_goals or self.data_tasks_goal or self.data_studied_goal:
+        # Temporary placeholder while lacking insruction sheet
+        if True:
             # Draw the tasks
             task_image = self._draw_tasks()
 

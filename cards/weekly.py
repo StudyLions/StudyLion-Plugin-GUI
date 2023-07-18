@@ -736,14 +736,14 @@ class WeeklyStatsPage(Layout):
             for start, end in day:
                 flat_start = (start == 0)
                 duration = end - start
-                xpos = x0 + int(start / seconds_in_day * day_width)
+                xpos = x0 + int(start * day_width / seconds_in_day)
 
                 flat_end = (end == seconds_in_day)
 
                 if flat_end:
                     width = image.width - xpos
                 else:
-                    width = int(duration / seconds_in_day * day_width)
+                    width = int(duration * day_width / seconds_in_day)
 
                 bar = self.draw_timeline_bar(
                     width,
@@ -780,12 +780,20 @@ class WeeklyStatsPage(Layout):
         return image
 
     def draw_timeline_bar(self, width, last=False, flat_start=False, flat_end=False) -> Image:
+        # logger.debug(
+        #     f"Drawing timeline bar with width={width}, last={last}, flat_start={flat_start}, flat_end={flat_end}"
+        # )
         if last:
             end = self.skin.btm_last_end
             colour = self.skin.btm_last_colour
         else:
             end = self.skin.btm_this_end
             colour = self.skin.btm_this_colour
+
+        if width < (end.width // 2):
+            width = end.width // 2
+            flat_start = True
+            flat_end = True
 
         image = Image.new(
             'RGBA',

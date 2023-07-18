@@ -242,13 +242,14 @@ class ProfileLayout(Layout):
             font=self.skin.header_font,
             fill=self.skin.header_colour_1
         )
-        xposition += self.skin.header_font.getlength(self.data_name + ' ')
-        draw.text(
-            (xposition, position),
-            self.data_discrim,
-            font=self.skin.header_font,
-            fill=self.skin.header_colour_2
-        )
+        if self.data_discrim:
+            xposition += self.skin.header_font.getlength(self.data_name + ' ')
+            draw.text(
+                (xposition, position),
+                self.data_discrim,
+                font=self.skin.header_font,
+                fill=self.skin.header_colour_2
+            )
         position += self.skin.header_height + self.skin.header_gap
 
         # Draw column 1
