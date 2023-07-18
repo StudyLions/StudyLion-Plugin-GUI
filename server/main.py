@@ -8,7 +8,7 @@ from contextvars import ContextVar, copy_context
 from concurrent.futures import ProcessPoolExecutor
 import random
 
-from meta.logger import log_app, logging_context, log_context, log_action_stack
+from meta.logger import log_app, logging_context, log_context, log_action_stack, setup_main_logger, make_queue_handler
 from meta.config import conf
 from babel.translator import LeoBabel, ctx_translator
 
@@ -17,6 +17,13 @@ from ..utils import RequestState
 
 requestid = ContextVar('requestid', default=None)
 logger = logging.getLogger(__name__)
+
+for name in conf.config.options('LOGGING_LEVELS', no_defaults=True):
+    logging.getLogger(name).setLevel(conf.logging_levels[name])
+
+q = setup_main_logger(multiprocess=True)
+
+log_app.set("GUI_SERVER")
 
 
 # TODO: General error handling, logging, and return paths for exceptions/null data
@@ -140,6 +147,7 @@ def worker_configurer():
 async def main():
     # logging_queue = multiprocessing.Manager().Queue(-1)
     # threading.Thread(target=logger_thread, args=(logging_queue,)).start()
+    logger.debug("Test")
 
     global executor
     log_app.set("GUI_SERVER")
@@ -149,6 +157,7 @@ async def main():
 
     with logging_context(action='SPAWN'):
         executor = ProcessPoolExecutor(MAX_PROC, initializer=worker_configurer)
+        executor.submit(worker_configurer)
         # for i in range(MAX_PROC):
         #     executor.submit(worker_configurer)
 
@@ -162,4 +171,7 @@ async def main():
 
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    finally:
+        logging.shutdown()
