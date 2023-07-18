@@ -4,6 +4,7 @@ from PIL import Image, ImageDraw
 
 from babel.translator import LocalBabel
 
+from ..utils import font_height
 from ..base import Card, Layout, fielded, Skin, CardMode
 from ..base.Skin import (
     AssetField, BlobField, StringField, NumberField, RawField,
@@ -65,11 +66,11 @@ class StatsSkin(Skin):
     header_font: FontField = ('Black', 27)
     header_colour: ColourField = '#DDB21D'
     header_gap: NumberField = 35  # Gap between header and column contents
-    header_height: ComputedField = lambda skin: skin.header_font.getsize('STATISTICS')[1]
+    header_height: ComputedField = lambda skin: font_height(skin.header_font)
 
     # First column
     col1_header: LazyStringField = _p('skin:stats|header:col1', 'STATISTICS')
-    col1_header_height: ComputedField = lambda skin: skin.header_font.getsize(skin.col1_header)[1]
+    col1_header_height: ComputedField = lambda skin: font_height(skin.header_font)
     stats_subheader_leaderboard: LazyStringField = _p(
         'skin:stats|subheader:leaderboard', 'LEADERBOARD POSITION'
     )
@@ -103,8 +104,12 @@ class StatsSkin(Skin):
     stats_subheader_pregap: NumberField = 8
     stats_subheader_font: FontField = ('Black', 21)
     stats_subheader_colour: ColourField = '#FFFFFF'
+    stats_subheader_bbox: ComputedField = lambda skin: (
+        skin.stats_subheader_font.getbbox(skin.stats_subheader_leaderboard)
+    )
     stats_subheader_size: ComputedField = lambda skin: (
-        skin.stats_subheader_font.getsize(skin.stats_subheader_leaderboard)
+        skin.stats_subheader_bbox[2] - skin.stats_subheader_bbox[0],
+        skin.stats_subheader_bbox[3] - skin.stats_subheader_bbox[1],
     )
     stats_text_gap: NumberField = 13  # Gap between stat lines
     stats_text_font: FontField = ('SemiBold', 19)
@@ -132,7 +137,7 @@ class StatsSkin(Skin):
         'skin:stats|field:anki',
         'ANKI: COMING SOON'
     )
-    stats_text_height: ComputedField = lambda skin: skin.stats_text_font.getsize(skin.stats_text_daily)[1]
+    stats_text_height: ComputedField = lambda skin: font_height(skin.stats_text_font)
     stats_text_colour: ColourField = '#BABABA'
 
     col1_size: ComputedField = lambda skin: (
@@ -194,18 +199,22 @@ class StatsSkin(Skin):
     }[skin.mode]
     col2_hours_colour: ColourField = '#1473A2'
     col2_date_gap: NumberField = 25  # Gap between date line and calender
-    col2_subheader_height: ComputedField = lambda skin: skin.col2_date_font.getsize('JANUARY')[1]
+    col2_subheader_height: ComputedField = lambda skin: font_height(skin.col2_date_font)
     cal_column_sep: NumberField = 35
     cal_weekday_font: FontField = ('ExtraBold', 21)
     cal_weekday_colour: ColourField = '#FFFFFF'
-    cal_weekday_height: ComputedField = lambda skin: skin.cal_weekday_font.getsize('S')[1]
+    cal_weekday_height: ComputedField = lambda skin: font_height(skin.cal_weekday_font)
     cal_weekday_gap: NumberField = 23
     cal_number_font: FontField = ('Medium', 20)
     cal_number_end_colour: ColourField = '#BABABA'
     cal_number_colour: ColourField = '#BABABA'
     cal_number_gap: NumberField = 28
     alt_cal_number_gap: NumberField = 20
-    cal_number_size: ComputedField = lambda skin: skin.cal_number_font.getsize('88')
+    cal_number_bbox: ComputedField = lambda skin: skin.cal_number_font.getbbox('88')
+    cal_number_size: ComputedField = lambda skin: (
+        skin.cal_number_bbox[2] - skin.cal_number_bbox[0],
+        skin.cal_number_bbox[3] - skin.cal_number_bbox[1],
+    )
 
     cal_streak_mask: AssetField = 'stats/streak_mask.png'
 

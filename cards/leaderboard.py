@@ -5,6 +5,7 @@ from PIL import Image, ImageDraw
 
 from babel.translator import LocalBabel
 
+from ..utils import getsize
 from ..base import Card, Layout, fielded, Skin, FieldDesc, CardMode
 from ..base.Avatars import avatar_manager
 from ..base.Skin import (
@@ -86,7 +87,7 @@ class LeaderboardSkin(Skin):
         CardMode.ANKI: skin.anki_header_text,
     }[skin.mode]
     header_text_font: FontField = ('ExtraBold', 80)
-    header_text_size: ComputedField = lambda skin: skin.header_text_font.getsize(skin.header_text)
+    header_text_size: ComputedField = lambda skin: getsize(skin.header_text_font, skin.header_text)
     header_text_colour: ColourField = '#DDB21D'
 
     header_text_gap: NumberField = 15
@@ -243,7 +244,8 @@ class LeaderboardPage(Layout):
             fill=self.skin.top_position_colour,
             anchor='mt'
         )
-        text_y += self.skin.top_name_font.getsize('1ST')[1] + self.skin.top_text_sep
+        bbox = self.skin.top_position_font.getbbox('1ST')
+        text_y += bbox[3] + self.skin.top_text_sep
         draw.text(
             (text_x, text_y),
             first_entry.name,
@@ -251,7 +253,8 @@ class LeaderboardPage(Layout):
             fill=self.skin.top_name_colour,
             anchor='mt'
         )
-        text_y += self.skin.top_name_font.getsize(first_entry.name)[1] + self.skin.top_text_sep
+        bbox = self.skin.top_name_font.getbbox(first_entry.name)
+        text_y += bbox[3] + self.skin.top_text_sep
         multip = 3600 if self.skin.mode in (CardMode.VOICE, CardMode.STUDY) else 1
         draw.text(
             (text_x, text_y),
@@ -281,7 +284,8 @@ class LeaderboardPage(Layout):
                 fill=self.skin.top_position_colour,
                 anchor='mt'
             )
-            text_y += self.skin.top_name_font.getsize('2ND')[1] + self.skin.top_text_sep
+            bbox = self.skin.top_position_font.getbbox('2ND')
+            text_y += bbox[3] + self.skin.top_text_sep
             draw.text(
                 (text_x, text_y),
                 second_entry.name,
@@ -289,7 +293,8 @@ class LeaderboardPage(Layout):
                 fill=self.skin.top_name_colour,
                 anchor='mt'
             )
-            text_y += self.skin.top_name_font.getsize(second_entry.name)[1] + self.skin.top_text_sep
+            bbox = self.skin.top_name_font.getbbox(second_entry.name)
+            text_y += bbox[3] + self.skin.top_text_sep
             draw.text(
                 (text_x, text_y),
                 self.skin.top_hours_text.format(amount=second_entry.time // multip),
@@ -318,7 +323,8 @@ class LeaderboardPage(Layout):
                 fill=self.skin.top_position_colour,
                 anchor='mt'
             )
-            text_y += self.skin.top_name_font.getsize('3ND')[1] + self.skin.top_text_sep
+            bbox = self.skin.top_position_font.getbbox('3RD')
+            text_y += bbox[3] + self.skin.top_text_sep
             draw.text(
                 (text_x, text_y),
                 third_entry.name,
@@ -326,7 +332,8 @@ class LeaderboardPage(Layout):
                 fill=self.skin.top_name_colour,
                 anchor='mt'
             )
-            text_y += self.skin.top_name_font.getsize(third_entry.name)[1] + self.skin.top_text_sep
+            bbox = self.skin.top_name_font.getbbox(third_entry.name)
+            text_y += bbox[3] + self.skin.top_text_sep
             draw.text(
                 (text_x, text_y),
                 self.skin.top_hours_text.format(amount=third_entry.time // multip),
@@ -419,6 +426,7 @@ class LeaderboardPage(Layout):
         )
 
         # Write time
+        # TODO: Entry format for different leaderboard types
         time_str = "{:02d}:{:02d}".format(
             entry.time // 3600,
             (entry.time % 3600) // 60
@@ -460,12 +468,16 @@ class LeaderboardPage(Layout):
         return image
 
     def _draw_header_text(self) -> Image:
+        text_name = self.skin.subheader_server_text
+        text_value = self.server_name
+        bbox = self.skin.subheader_name_font.getbbox(text_name + text_value)
+        height = bbox[3]
         image = Image.new(
             'RGBA',
             (self.skin.header_text_size[0],
              self.skin.header_text_size[1] + self.skin.header_text_gap + self.skin.header_text_line_width
              + self.skin.header_text_line_gap
-             + self.skin.subheader_name_font.getsize("THIS MONTHghjyp")[1]),
+             + height),
         )
         draw = ImageDraw.Draw(image)
         xpos, ypos = 0, 0
@@ -489,9 +501,7 @@ class LeaderboardPage(Layout):
         # ypos += self.skin.header_text_line_gap
 
         # Draw the subheader
-        text_name = self.skin.subheader_server_text
         text_name_width = self.skin.subheader_name_font.getlength(text_name)
-        text_value = self.server_name
         text_value_width = self.skin.subheader_value_font.getlength(text_value)
         total_width = text_name_width + text_value_width
         xpos += (image.width - total_width) // 2

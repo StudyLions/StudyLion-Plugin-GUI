@@ -6,6 +6,7 @@ from ..base.Skin import (
     AssetField, RGBAAssetField, BlobField, AssetPathField, StringField, NumberField,
     FontField, ColourField, PointField, ComputedField
 )
+from ..utils import font_height
 
 
 @fielded
@@ -67,7 +68,8 @@ class MiniProfileLayout:
         # Draw name
         name_text = self.data_name
         name_length = self.skin.mini_profile_name_font.getlength(name_text + ' ')
-        name_height = self.skin.mini_profile_name_font.getsize(name_text)[1]
+        # name_height = self.skin.mini_profile_name_font.getsize(name_text)[1]
+        name_height = font_height(self.skin.mini_profile_name_font)
         draw.text(
             (xpos, ypos),
             name_text,
@@ -102,7 +104,7 @@ class MiniProfileLayout:
         """
         Draw a single profile badge, with the given text.
         """
-        text_length = self.skin.mini_profile_badge_font.getsize(text)[0]
+        text_length = self.skin.mini_profile_badge_font.getlength(text)
 
         height = self.skin.mini_profile_badge_end.height
         width = text_length + self.skin.mini_profile_badge_end.width

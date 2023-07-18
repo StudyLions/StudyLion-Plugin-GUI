@@ -54,9 +54,22 @@ def inter_font(name, **kwargs):
 def get_font(family, name, **kwargs):
     return ImageFont.truetype(
         asset_path(f"fonts/{family}/{family}-{name}.ttf"),
-        layout_engine=ImageFont.LAYOUT_BASIC,
+        layout_engine=ImageFont.Layout.BASIC,
         **kwargs
     )
+
+
+def font_height(font: ImageFont):
+    ascent, descent = font.getmetrics()
+    return ascent + descent
+
+
+def getsize(font: ImageFont, text: str, drawing=True):
+    left, top, right, bottom = font.getbbox(text)
+    if drawing:
+        return (right, bottom)
+    else:
+        return (right - left, bottom - top)
 
 
 def image_as_file(image, name):

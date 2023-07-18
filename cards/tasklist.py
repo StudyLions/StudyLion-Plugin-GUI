@@ -3,6 +3,7 @@ import pickle
 
 from PIL import Image, ImageDraw
 
+from ..utils import font_height, getsize
 from ..base import Card, Layout, fielded, Skin, FieldDesc
 from ..base.Avatars import avatar_manager
 from ..base.Skin import (
@@ -26,7 +27,6 @@ class TasklistSkin(Skin):
     title_pre_gap: NumberField = 40
     title_text: StringField = "TO DO LIST"
     title_font: FontField = ('ExtraBold', 76)
-    title_size: ComputedField = lambda skin: skin.title_font.getsize(skin.title_text)
     title_colour: ColourField = '#DDB21D'
     title_underline_gap: NumberField = 10
     title_underline_width: NumberField = 5
@@ -81,7 +81,7 @@ class TasklistSkin(Skin):
     task_undone_text_font: FontField = ('Regular', 55)
     task_undone_text_colour: ColourField = '#FFFFFF'
 
-    task_text_height: ComputedField = lambda skin: skin.task_done_text_font.getsize('TASK')[1]
+    task_text_height: ComputedField = lambda skin: font_height(skin.task_done_text_font)
     task_num_sep: NumberField = 30
     task_inter_gap: NumberField = 32
     task_intra_gap: NumberField = 25
@@ -135,7 +135,8 @@ class TasklistLayout(Layout, MiniProfileLayout):
         xpos, ypos = 0, 0
 
         # Draw header text
-        xpos = (image.width - self.skin.title_size[0]) // 2
+        title_size = getsize(self.skin.title_font, self.skin.title_text)
+        xpos = (image.width - title_size[0]) // 2
         ypos += self.skin.title_pre_gap
         draw.text(
             (xpos, ypos),
@@ -145,7 +146,7 @@ class TasklistLayout(Layout, MiniProfileLayout):
         )
 
         # Underline it
-        ypos += self.skin.title_size[1] + self.skin.title_underline_gap
+        ypos += title_size[1] + self.skin.title_underline_gap
         # draw.line(
         #     (xpos, ypos, xpos + self.skin.title_size[0], ypos),
         #     fill=self.skin.title_colour,
@@ -168,7 +169,7 @@ class TasklistLayout(Layout, MiniProfileLayout):
             # Draw the date text
             ypos -= self.skin.footer_gap
             date_text = self.data_date.strftime("As of %d %b")
-            size = self.skin.footer_font.getsize(date_text)
+            size = getsize(self.skin.footer_font, date_text)
             ypos -= size[1]
             draw.text(
                 ((image.width - size[0]) // 2, ypos),
@@ -206,7 +207,7 @@ class TasklistLayout(Layout, MiniProfileLayout):
         # Draw the date text
         ypos -= self.skin.footer_gap
         date_text = self.data_date.strftime("As of %d %b • {} {}".format(self.data_name, self.data_discrim))
-        size = self.skin.footer_font.getsize(date_text)
+        size = getsize(self.skin.footer_font, date_text)
         ypos -= size[1]
         draw.text(
             ((image.width - size[0]) // 2, ypos),
@@ -300,7 +301,7 @@ class TasklistLayout(Layout, MiniProfileLayout):
 
         # Then draw it
         bboxes = [font.getbbox(line) for line in lines]
-        heights = [font.getsize(line)[1] for line in lines]
+        heights = [font_height(font) for line in lines]
         height = sum(height for height in heights) + (len(lines) - 1) * self.skin.task_intra_gap
         image = Image.new('RGBA', (maxwidth, height))
         draw = ImageDraw.Draw(image)

@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw
 
 from babel.translator import LocalBabel
 
-from ..utils import get_avatar_key
+from ..utils import get_avatar_key, font_height
 from ..base import Card, Layout, fielded, Skin, FieldDesc, CardMode
 from ..base.Avatars import avatar_manager
 from ..base.Skin import (
@@ -38,7 +38,7 @@ class ProfileSkin(Skin):
     header_colour_1: ColourField = '#DDB21D'
     header_colour_2: ColourField = '#BABABA'
     header_gap: NumberField = 35
-    header_height: ComputedField = lambda skin: skin.header_font.getsize("USERNAME #0000")[1]
+    header_height: ComputedField = lambda skin: font_height(skin.header_font)
 
     # Column 1
     avatar_mask: AssetField = FieldDesc(AssetField, 'profile/avatar_mask.png', convert=None)
@@ -84,7 +84,7 @@ class ProfileSkin(Skin):
     )
     subheader_font: FontField = ('Black', 27)
     subheader_colour: ColourField = '#DDB21D'
-    subheader_height: ComputedField = lambda skin: skin.subheader_font.getsize(skin.subheader_profile_text)[1]
+    subheader_height: ComputedField = lambda skin: font_height(skin.subheader_font)
     subheader_gap: NumberField = 15
 
     col2_size: ComputedField = lambda skin: (
@@ -147,7 +147,7 @@ class ProfileSkin(Skin):
     )
     rank_name_font: FontField = ('Black', 23)
     rank_name_colour: ColourField = '#DDB21D'
-    rank_name_height: ComputedField = lambda skin: skin.rank_name_font.getsize('VAMPIRE')[1]
+    rank_name_height: ComputedField = lambda skin: font_height(skin.rank_name_font)
     rank_hours_font: FontField = ('Light', 18)
     rank_hours_colour: ColourField = '#FFFFFF'
 
@@ -172,13 +172,13 @@ class ProfileSkin(Skin):
 
     next_rank_font: FontField = ('Italic', 15)
     next_rank_colour: ColourField = '#FFFFFF'
-    next_rank_height: ComputedField = lambda skin: skin.next_rank_font.getsize('NEXT RANK:')[1]
+    next_rank_height: ComputedField = lambda skin: font_height(skin.next_rank_font)
 
     rank_size: ComputedField = lambda skin: (
         skin.col2_size[0],
         skin.rank_name_height + skin.bar_gap
         + skin.bar_full.height + skin.bar_gap
-        + skin.next_rank_height + skin.next_rank_height // 2  # Adding skin.height skin.for skin.taller skin.glyphs
+        + skin.next_rank_height  # Adding skin.height skin.for skin.taller skin.glyphs
     )
 
 
@@ -362,9 +362,8 @@ class ProfileLayout(Layout):
         )
 
         # Draw ranking box
-        position = self.skin.col2_size[1] - self.skin.rank_size[1]
-
         ranking = self.draw_rank()
+        position = self.skin.col2_size[1] - ranking.height
         col2.alpha_composite(
             ranking,
             (0, position)
@@ -412,7 +411,7 @@ class ProfileLayout(Layout):
         """
         Draw a single profile badge, with the given text.
         """
-        text_length = self.skin.badge_font.getsize(text)[0]
+        text_length = int(self.skin.badge_font.getlength(text))
 
         height = self.skin.badge_end_blob.height
         width = text_length + self.skin.badge_end_blob.width
@@ -517,9 +516,9 @@ class ProfileLayout(Layout):
                 fill=self.skin.rank_name_colour,
             )
 
-            name_size = self.skin.rank_name_font.getsize(rank_name + ' ')
-            position += name_size[1]
-            xposition += name_size[0]
+            name_bbox = self.skin.rank_name_font.getbbox(rank_name + ' ')
+            position += name_bbox[3]
+            xposition += name_bbox[2] - name_bbox[0]
 
             draw.text(
                 (xposition, position),

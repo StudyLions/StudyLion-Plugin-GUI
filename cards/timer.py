@@ -5,6 +5,7 @@ from PIL import Image, ImageDraw, ImageOps
 
 from babel.translator import LocalBabel
 
+from ..utils import font_height, getsize
 from ..base import Card, Layout, fielded, Skin
 from ..base.Avatars import avatar_manager
 from ..base.Skin import (
@@ -151,9 +152,10 @@ class TimerLayout(Layout):
         )
 
         # Draw timer text
-        stage_size = self.skin.stage_font.getsize(' ' + self.skin.stage_text)
+        # stage_size = self.skin.stage_font.getsize(' ' + self.skin.stage_text)
+        stage_height = font_height(self.skin.stage_font)
 
-        ypos += timer_image.height // 2 - stage_size[1] // 2
+        ypos += timer_image.height // 2 - stage_height // 2
         xpos += timer_image.width // 2
         draw.text(
             (xpos, ypos),
@@ -163,10 +165,10 @@ class TimerLayout(Layout):
             anchor='mm'
         )
 
-        size = int(self.skin.countdown_font.getsize(text)[1])
+        size = int(getsize(self.skin.countdown_font, text)[1])
         ypos += size
 
-        self.skin.mic_icon.thumbnail((stage_size[1], stage_size[1]))
+        self.skin.mic_icon.thumbnail((stage_height, stage_height))
         length = int(self.skin.mic_icon.width + self.skin.stage_font.getlength(' ' + self.skin.stage_text))
         xpos -= length // 2
 
@@ -187,7 +189,7 @@ class TimerLayout(Layout):
             grid_image = self.draw_user_grid()
 
             # ypos = self.skin.header_field_height + (image.height - self.skin.header_field_height - grid_image.height) // 2
-            ypos = timer_y + (timer_image.height - grid_image.height) // 2 - stage_size[1] // 2
+            ypos = timer_y + (timer_image.height - grid_image.height) // 2 - stage_height // 2
             xpos = (
                 self.skin.inner_margin
                 + (timer_x - self.skin.inner_sep - self.skin.inner_margin) // 2
@@ -203,7 +205,7 @@ class TimerLayout(Layout):
         ypos = image.height
         ypos -= self.skin.date_gap
         date_text = self.skin.date_text
-        size = self.skin.date_font.getsize(date_text)
+        size = getsize(self.skin.date_font, date_text)
         ypos -= size[1]
         draw.text(
             ((image.width - size[0]) // 2, ypos),

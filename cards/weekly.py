@@ -8,7 +8,7 @@ from datetime import timedelta, datetime, timezone
 from babel.translator import LocalBabel
 from babel.utils import local_month
 
-from ..utils import resolve_asset_path
+from ..utils import resolve_asset_path, font_height, getsize
 from ..base import Card, Layout, fielded, Skin, CardMode
 from ..base.Skin import (
     AssetField, RGBAAssetField, AssetPathField, BlobField, StringField, NumberField, PointField, RawField,
@@ -70,7 +70,7 @@ class WeeklyStatsSkin(Skin):
         CardMode.ANKI: skin.anki_title_text,
     }[skin.mode]
     title_font: FontField = ('ExtraBold', 76)
-    title_size: ComputedField = lambda skin: skin.title_font.getbbox(skin.title_text)[2:]
+    title_size: ComputedField = lambda skin: getsize(skin.title_font, skin.title_text)
 
     title_colour: ColourField = '#DDB21D'
     title_underline_gap: NumberField = 10
@@ -102,11 +102,11 @@ class WeeklyStatsSkin(Skin):
     top_weekday_pre_gap: NumberField = 20
     top_weekday_font: FontField = ('Bold', 36.35)
     top_weekday_colour: ColourField = '#FFFFFF'
-    top_weekday_height: ComputedField = lambda skin: skin.top_weekday_font.getsize('MTWTFSS')[1]
+    top_weekday_height: ComputedField = lambda skin: font_height(skin.top_weekday_font)
     top_weekday_gap: NumberField = 5
     top_date_font: FontField = ('SemiBold', 30)
     top_date_colour: ColourField = '#808080'
-    top_date_height: ComputedField = lambda skin: skin.top_date_font.getsize('8/8')[1]
+    top_date_height: ComputedField = lambda skin: font_height(skin.top_date_font)
 
     top_bar_mask: RGBAAssetField = 'weekly/top_bar_mask.png'
 
@@ -184,7 +184,7 @@ class WeeklyStatsSkin(Skin):
 
     btm_day_font: FontField = ('SemiBold', 31)
     btm_day_colour: ColourField = '#FFFFFF'
-    btm_day_height: ComputedField = lambda skin: skin.btm_day_font.getsize('88')[1]
+    btm_day_height: ComputedField = lambda skin: font_height(skin.btm_day_font)
     btm_day_gap: NumberField = 15
 
     btm_emoji_path: StringField = "weekly/emojis"
@@ -414,8 +414,7 @@ class WeeklyStatsPage(Layout):
         )
 
         # Underline it
-        title_size = self.skin.title_font.getsize(self.skin.title_text)
-        ypos += title_size[1] + self.skin.title_gap
+        ypos += self.skin.title_size[1] + self.skin.title_gap
         # ypos += title_size[1] + self.skin.title_underline_gap
         # draw.line(
         #     (xpos, ypos, xpos + title_size[0], ypos),
@@ -457,7 +456,7 @@ class WeeklyStatsPage(Layout):
             name=self.data_name,
             discrim=self.data_discrim
         )
-        size = self.skin.footer_font.getsize(date_text)
+        size = getsize(self.skin.footer_font, date_text)
         ypos -= size[1]
         draw.text(
             ((image.width - size[0]) // 2, ypos),
