@@ -173,7 +173,7 @@ class LeaderboardSkin(Skin):
     )
     voice_entry_hours_text: LazyStringField = _p(
         'skin:leaderboard|mode:voice|entry_hours_text',
-        "{HH}:{MM}"
+        "{HH:.02d}:{MM:.02d}"
     )
     anki_entry_hours_text: LazyStringField = _p(
         'skin:leaderboard|mode:anki|entry_hours_text',
