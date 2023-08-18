@@ -790,8 +790,8 @@ class WeeklyStatsPage(Layout):
             end = self.skin.btm_this_end
             colour = self.skin.btm_this_colour
 
-        if width < (end.width // 2):
-            width = end.width // 2
+        if width < (end.width):
+            width = end.width
             flat_start = True
             flat_end = True
 
@@ -817,11 +817,12 @@ class WeeklyStatsPage(Layout):
         # Draw the rectangle
         rstart = (not flat_start) * (end.width // 2)
         rend = width - (not flat_end) * (end.width // 2)
-        draw.rectangle(
-            ((rstart, 0), (rend, image.height)),
-            fill=colour,
-            width=0
-        )
+        if rstart < rend:
+            draw.rectangle(
+                ((rstart, 0), (rend, image.height)),
+                fill=colour,
+                width=0
+            )
 
         return image
 
