@@ -165,7 +165,7 @@ class LeaderboardSkin(Skin):
     entry_name_colour: ColourField = '#FFFFFF'
     study_entry_hours_text: LazyStringField = _p(
         'skin:leaderboard|mode:study|entry_hours_text',
-        "{HH:.02d}:{MM:.02d}"
+        "{HH:02d}:{MM:02d}"
     )
     text_entry_hours_text: LazyStringField = _p(
         'skin:leaderboard|mode:text|entry_hours_text',
@@ -173,7 +173,7 @@ class LeaderboardSkin(Skin):
     )
     voice_entry_hours_text: LazyStringField = _p(
         'skin:leaderboard|mode:voice|entry_hours_text',
-        "{HH:.02d}:{MM:.02d}"
+        "{HH:02d}:{MM:02d}"
     )
     anki_entry_hours_text: LazyStringField = _p(
         'skin:leaderboard|mode:anki|entry_hours_text',
