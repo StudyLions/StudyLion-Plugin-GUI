@@ -76,7 +76,7 @@ class MiniProfileLayout:
             fill=self.skin.mini_profile_name_colour,
             font=self.skin.mini_profile_name_font
         )
-        if self.data_discrim:
+        if self.data_discrim != '0':
             draw.text(
                 (xpos + name_length, ypos),
                 self.data_discrim,

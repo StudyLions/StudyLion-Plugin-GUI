@@ -242,7 +242,7 @@ class ProfileLayout(Layout):
             font=self.skin.header_font,
             fill=self.skin.header_colour_1
         )
-        if self.data_discrim:
+        if len(self.data_discrim) > 2:
             xposition += self.skin.header_font.getlength(self.data_name + ' ')
             draw.text(
                 (xposition, position),
