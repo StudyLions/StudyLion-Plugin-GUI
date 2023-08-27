@@ -28,6 +28,7 @@ class MonthlyStatsSkin(Skin):
     }
 
     mode: RawField = CardMode.TEXT
+    font_family: RawField = "Inter"
 
     background: AssetField = 'monthly/background.png'
 
