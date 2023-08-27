@@ -4,7 +4,7 @@ import time
 import logging
 
 from meta import conf
-from meta.logger import logging_context
+from meta.logger import set_logging_context, with_log_ctx
 
 from .utils import RequestState
 
@@ -19,39 +19,40 @@ class EmptyResponse(ValueError):
 # TODO: Request retry to handle restarting or temporary errors
 
 
+@with_log_ctx(action="Render")
 async def request(route, args=(), kwargs={}):
-    with logging_context(action=f"Render {route}"):
-        logger.debug(
-            f"Sending rendering request to route {route!r} with args {args!r} and kwargs {kwargs!r}"
+    set_logging_context(action=route)
+    logger.debug(
+        f"Sending rendering request to route {route!r} with args {args!r} and kwargs {kwargs!r}"
+    )
+    now = time.time()
+    reader, writer = await asyncio.open_unix_connection(path=socket_path)
+
+    packet = (route, args, kwargs)
+    encoded = pickle.dumps(packet)
+
+    writer.write(encoded)
+    writer.write_eof()
+
+    data = await reader.read(-1)
+    result = pickle.loads(data)
+
+    await writer.drain()
+    writer.close()
+
+    end = time.time()
+
+    if not result or not result['rqid']:
+        logger.error(f"Rendering server sent a malformed response: {result}")
+        raise EmptyResponse
+    elif result['state'] != RequestState.SUCCESS:
+        logger.error(
+            f"Rendering failed! Response: {result}"
         )
-        now = time.time()
-        reader, writer = await asyncio.open_unix_connection(path=socket_path)
-
-        packet = (route, args, kwargs)
-        encoded = pickle.dumps(packet)
-
-        writer.write(encoded)
-        writer.write_eof()
-
-        data = await reader.read(-1)
-        result = pickle.loads(data)
-
-        await writer.drain()
-        writer.close()
-
-        end = time.time()
-
-        if not result or not result['rqid']:
-            logger.error(f"Rendering server sent a malformed response: {result}")
-            raise EmptyResponse
-        elif result['state'] != RequestState.SUCCESS:
-            logger.error(
-                f"Rendering failed! Response: {result}"
-            )
-            raise EmptyResponse
-        else:
-            image_data = result.pop('data')
-            logger.debug(
-                f"Rendering completed in {end-now:.6f} seconds. Response: {result}"
-            )
-            return image_data
+        raise EmptyResponse
+    else:
+        image_data = result.pop('data')
+        logger.debug(
+            f"Rendering completed in {end-now:.6f} seconds. Response: {result}"
+        )
+        return image_data
