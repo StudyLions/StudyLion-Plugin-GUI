@@ -33,6 +33,8 @@ class _GoalSkin(Skin):
 
     background: AssetField = "goals/background.png"
 
+    font_family: RawField = 'Inter'
+
     # help_frame: AssetField = None
 
     # Title section
