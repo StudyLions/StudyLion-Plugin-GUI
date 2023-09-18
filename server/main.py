@@ -2,24 +2,24 @@ import time
 import asyncio
 import pickle
 import logging
-import string
 import multiprocessing
 from contextvars import ContextVar, copy_context
 from concurrent.futures import ProcessPoolExecutor
-import random
 
-from meta.logger import log_app, logging_context, log_context, log_action_stack, setup_main_logger, make_queue_handler
+from meta.logger import log_app, logging_context, log_context, log_action_stack, setup_main_logger, make_queue_handler, set_logging_context
 from meta.config import conf
 from babel.translator import LeoBabel, ctx_translator
 
 from ..routes import routes
-from ..utils import RequestState
+from ..utils import RequestState, short_uuid
 
 requestid = ContextVar('requestid', default=None)
 logger = logging.getLogger(__name__)
 
 for name in conf.config.options('LOGGING_LEVELS', no_defaults=True):
     logging.getLogger(name).setLevel(conf.logging_levels[name])
+
+logging.getLogger('PIL.PngImagePlugin').setLevel(logging.INFO)
 
 q = setup_main_logger(multiprocess=True)
 
@@ -33,68 +33,65 @@ MAX_PROC = conf.gui.getint('process_count')
 executor: ProcessPoolExecutor = None
 
 
-uuid_alphabet = string.ascii_lowercase + string.digits
-
-
-def short_uuid():
-    return ''.join(random.choices(uuid_alphabet, k=10))
-
-
 async def handle_request(reader, writer):
     data = await reader.read()
     route, args, kwargs = pickle.loads(data)
     rqid = short_uuid()
     requestid.set(rqid)
 
-    with logging_context(context=f"RQID: {rqid}", action=f"ROUTE {route}"):
-        logger.debug(
-            f"Handling rendering request on route {route!r} with args {args!r} and kwargs {kwargs!r}"
-        )
+    set_logging_context(context=f"RQID: {rqid}", action=f"ROUTE {route}")
+    logger.debug(
+        f"Handling rendering request on route {route!r} with args {args!r} and kwargs {kwargs!r}"
+    )
 
-        if route in routes:
-            try:
-                start = time.time()
-                data, error = await routes[route](runner, args, kwargs)
-                if error is None:
-                    state = RequestState.SUCCESS
-                else:
-                    state = RequestState.RENDER_ERROR
-            except Exception as e:
-                logger.error(
-                    "Unhandled server exception encountered while rendering request.",
-                    exc_info=True
-                )
-                data, error = b'', repr(e)
-                state = RequestState.SYSTEM_ERROR
-
-            dur = time.time() - start
-
-            payload = {
-                'rqid': rqid,
-                'state': state.value,
-                'data': data,
-                'length': len(data),
-                'error': error,
-                'duration': dur
-            }
-            logger.debug(
-                f"Request complete with status {state.name} in {dur:.6f} seconds."
+    if route in routes:
+        try:
+            start = time.time()
+            data, error = await routes[route](runner, args, kwargs)
+            if error is None:
+                state = RequestState.SUCCESS
+            else:
+                state = RequestState.RENDER_ERROR
+        except Exception as e:
+            logger.error(
+                "Unhandled server exception encountered while rendering request.",
+                exc_info=True
             )
-        else:
-            logger.warning(f"Unhandled route requested {route!r}")
-            payload = {
-                'rqid': rqid,
-                'state': int(RequestState.UNKNOWN_ROUTE),
-            }
+            data, error = b'', repr(e)
+            state = RequestState.SYSTEM_ERROR
 
-        response = pickle.dumps(payload)
-        writer.write(response)
-        writer.write_eof()
+        dur = time.time() - start
 
+        payload = {
+            'rqid': rqid,
+            'state': state.value,
+            'data': data,
+            'length': len(data),
+            'error': error,
+            'duration': dur
+        }
+        logger.debug(
+            f"Request complete with status {state.name} in {dur:.6f} seconds."
+        )
+    else:
+        logger.warning(f"Unhandled route requested {route!r}")
+        payload = {
+            'rqid': rqid,
+            'state': int(RequestState.UNKNOWN_ROUTE),
+        }
+
+    response = pickle.dumps(payload)
+    writer.write(response)
+    writer.write_eof()
+
+    try:
         await writer.drain()
-
-        writer.close()
-        await writer.wait_closed()
+    except ConnectionResetError:
+        logger.info("Request was cancelled.")
+    finally:
+        if not writer.is_closing():
+            writer.close()
+            await writer.wait_closed()
 
 
 def _execute(ctx, method, args, kwargs):

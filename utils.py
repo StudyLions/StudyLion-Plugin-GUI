@@ -3,6 +3,8 @@ import os
 import discord
 from enum import IntEnum
 import logging
+import string
+import random
 
 from PIL import ImageFont
 
@@ -86,3 +88,10 @@ def get_avatar_key(client, userid):
     else:
         hash = None
     return (userid, hash)
+
+
+uuid_alphabet = string.ascii_lowercase + string.digits
+
+
+def short_uuid():
+    return ''.join(random.choices(uuid_alphabet, k=10))

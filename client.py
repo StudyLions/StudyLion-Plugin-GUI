@@ -1,3 +1,4 @@
+from typing import Optional
 import asyncio
 import pickle
 import time
@@ -9,7 +10,7 @@ from meta import conf
 from meta.logger import set_logging_context, with_log_ctx
 from utils.lib import utc_now
 
-from .utils import RequestState
+from .utils import RequestState, short_uuid
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,11 @@ class GUIclient:
         # Limit the number of allowed connections
         self._connection_sem = asyncio.Semaphore(self.max_concurrent)
 
+        # Internal cache of rendering request tasks
+        # This is for easier introspection
+        # And an attempt to avoid the task being garbage collected
+        self._tasks = {}
+
     def delay(self, fail_count):
         return min(self.max_delay, self.retry_delay + self.retry_base ** fail_count)
 
@@ -108,65 +114,94 @@ class GUIclient:
                     self.failures = 0
                     self.retry_next = None
                     return connection
-                except Exception as e:
+                except asyncio.CancelledError:
+                    raise
+                except asyncio.TimeoutError:
                     self.failures += 1
                     self.total_failures += 1
                     delay = self.delay(self.failures)
                     self.retry_next = utc_now() + dt.timedelta(seconds=delay)
-
-                    if isinstance(e, TimeoutError):
-                        logger.warning(
-                            f"Connection to the rendering server timed out! Next retry after {delay} seconds"
-                        )
-                    elif isinstance(e, ConnectionError):
-                        logger.warning(
-                            f"Connection to the rendering server failed! Next retry after {delay} seconds",
-                            exc_info=True,
-                        )
-                    else:
-                        logger.exception(
-                            "Unexpected exception encountered connecting to the rendering server! "
-                            f"Ignoring and retrying cautiously after {delay} seconds",
-                            exc_info=True,
-                        )
+                    logger.warning(
+                        f"Connection to the rendering server timed out! Next retry after {delay} seconds"
+                    )
+                except (ConnectionRefusedError, ConnectionError, ConnectionResetError):
+                    self.failures += 1
+                    self.total_failures += 1
+                    delay = self.delay(self.failures)
+                    self.retry_next = utc_now() + dt.timedelta(seconds=delay)
+                    logger.warning(
+                        f"Connection to the rendering server failed! Next retry after {delay} seconds",
+                        exc_info=True,
+                    )
+                except Exception:
+                    self.failures += 1
+                    self.total_failures += 1
+                    delay = self.delay(self.failures)
+                    self.retry_next = utc_now() + dt.timedelta(seconds=delay)
+                    logger.exception(
+                        "Unexpected exception encountered connecting to the rendering server! "
+                        f"Skipping connection, setting retry to {delay} seconds.",
+                        exc_info=True,
+                    )
+                    raise
 
     @asynccontextmanager
-    async def connection(self, expiry):
+    async def connection(self):
+        set_logging_context(action="GUI connect")
         if self._connection_sem.locked():
             logger.debug("GUI render request pool full. Queuing request.")
-
-        try:
-            await wait_until(self._connection_sem.acquire(), expiry)
-        except TimeoutError:
-            logger.warning("Rendering request timed out waiting for the connection pool.")
-            raise ConnectionTimedOut
-        try:
-            try:
-                connection = await wait_until(self._new_connection(), expiry)
-            except TimeoutError:
-                logger.warning("Rendering request timed out while obtaining a new connection.")
-                raise ConnectionTimedOut
+        async with self._connection_sem:
+            logger.debug("Acquired connection semaphore, requesting connection.")
+            connection = await self._new_connection()
+            logger.debug("Acquired connection.")
 
             try:
                 _, writer = connection
                 yield connection
             finally:
+                logger.debug("Closing connection")
                 if not writer.is_closing():
                     writer.close()
                     await writer.wait_closed()
-        finally:
-            self._connection_sem.release()
 
     @with_log_ctx(action="Render")
-    async def request(self, route, args=(), kwargs={}):
+    async def request(self, route: str, timeout: Optional[float]=None, **kwargs):
+        reqid = short_uuid()
+        timeout = timeout or self.request_expiry
+        task = asyncio.create_task(
+            self._request(route, reqid=reqid, **kwargs),
+            name=f"Render {reqid}"
+        )
+        self._tasks[reqid] = task
+        task.add_done_callback(lambda fut: self._tasks.pop(reqid, None))
+        try:
+            return await asyncio.wait_for(task, timeout=timeout)
+        except RenderingException:
+            raise
+        except asyncio.CancelledError:
+            logger.debug(
+                f"Rendering req '{reqid}' received cancel signal."
+            )
+            raise
+        except asyncio.TimeoutError:
+            logger.warning(f"GUI rendering request '{reqid}' timed out.")
+            raise ConnectionTimedOut(f"Request {reqid} timed out.")
+        except (ConnectionError, ConnectionRefusedError, ConnectionResetError):
+            logger.warning(f"GUI rendering pipe broke for request '{reqid}'.", exc_info=True)
+            raise ConnectionFailure
+        except Exception:
+            logger.exception(
+                f"Unhandled exception while rendering request '{reqid}' on route `{route}` "
+                f"with kwargs: {kwargs}"
+            )
+            raise
+
+    async def _request(self, route, args=(), reqid: Optional[str] = None, kwargs={}):
         set_logging_context(action=route)
         logger.debug(
-            f"Sending rendering request to route {route!r} with args {args!r} and kwargs {kwargs!r}"
+            f"Sending rendering request '{reqid}' to route {route!r} with args {args!r} and kwargs {kwargs!r}"
         )
-        now = utc_now()
-        expiry = now + dt.timedelta(seconds=self.request_expiry)
-
-        async with self.connection(expiry) as connection:
+        async with self.connection() as connection:
             render_start = time.time()
             reader, writer = connection
 
@@ -179,25 +214,22 @@ class GUIclient:
             data = await reader.read(-1)
             result = pickle.loads(data)
 
-            writer.close()
-            await writer.wait_closed()
-
             render_end = time.time()
 
-            if not result or not result['rqid']:
-                logger.error(f"Rendering server sent a malformed response: {result}")
-                raise RenderingFailure(f"Malformed render response {result}")
-            elif result['state'] != RequestState.SUCCESS:
-                logger.error(
-                    f"Rendering failed! Response: {result}"
-                )
-                raise RenderingFailure(f"Rendering server returned {result}")
-            else:
-                image_data = result.pop('data')
-                logger.debug(
-                    f"Rendering completed in {render_end-render_start:.6f} seconds. Response: {result}"
-                )
-                return image_data
+        if not result or not result['rqid']:
+            logger.error(f"Rendering server sent a malformed response: {result}")
+            raise RenderingFailure(f"Malformed render response {result}")
+        elif result['state'] != RequestState.SUCCESS:
+            logger.error(
+                f"Rendering failed! Response: {result}"
+            )
+            raise RenderingFailure(f"Rendering server returned {result}")
+        else:
+            image_data = result.pop('data')
+            logger.debug(
+                f"Rendering completed in {render_end-render_start:.6f} seconds. Response: {result}"
+            )
+            return image_data
 
 
 async def wait_until(aws, expiry: dt.datetime):
@@ -208,6 +240,5 @@ async def wait_until(aws, expiry: dt.datetime):
 
 client = GUIclient(socket_path)
 
-
-async def request(*args, **kwargs):
-    return await client.request(*args, **kwargs)
+# Exposed for backwards compatibility
+request = client.request
