@@ -11,6 +11,12 @@ from meta.logger import set_logging_context, with_log_ctx
 from utils.lib import utc_now
 
 from .utils import RequestState, short_uuid
+from .errors import (
+    RenderingException,
+    ConnectionFailure,
+    ConnectionTimedOut,
+    RenderingFailure,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -18,47 +24,6 @@ socket_path = conf.gui.get('socket_path')
 
 
 # TODO: Catch RenderingException from the usual places with a custom error.
-
-
-class RenderingException(Exception):
-    """
-    Base exception class for GUI rendering exceptions
-    """
-    ...
-
-
-class EmptyResponse(RenderingException):
-    """
-    GUI server sent an empty response.
-
-    Mainly kept for backward compatibility.
-    """
-    ...
-
-
-class ConnectionFailure(RenderingException):
-    """
-    Could not connect to the GUI server.
-
-    Typically a temporary error.
-    """
-    ...
-
-
-class ConnectionTimedOut(ConnectionFailure):
-    """
-    Timed out while connecting to the GUI server.
-    """
-    ...
-
-
-class RenderingFailure(RenderingException):
-    """
-    The GUI server could not process the request.
-
-    Usually either malformed arguments or a bug in renderer.
-    """
-    ...
 
 
 class GUIclient:
@@ -71,7 +36,7 @@ class GUIclient:
 
     # How long after which to invalidate a rendering request
     # Avoids clogging the pipeline with waiting (and usually expired) requests
-    request_expiry = 90
+    request_expiry = 30
 
     max_concurrent = 5
 
