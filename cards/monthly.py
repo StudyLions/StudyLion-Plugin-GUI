@@ -315,10 +315,28 @@ class MonthlyStatsSkin(Skin):
         'ui:monthlystats|stats:daily_average|key',
         "Daily Average:"
     )
-    daily_average_value_text: LazyStringField = _p(
-        'ui:monthlystats|stats:daily_average|value',
+    study_daily_average_value_text: LazyStringField = _p(
+        'skin:monthlystats|mode:study|stats:daily_average|value',
         "{count} hours"
     )
+    voice_daily_average_value_text: LazyStringField = _p(
+        'skin:monthlystats|mode:voice|stats:daily_average|value',
+        "{count} hours"
+    )
+    text_daily_average_value_text: LazyStringField = _p(
+        'skin:monthlystats|mode:text|stats:daily_average|value',
+        "{count} msgs"
+    )
+    anki_daily_average_value_text: LazyStringField = _p(
+        'skin:monthlystats|mode:anki|stats:daily_average|value',
+        "{count} cards"
+    )
+    daily_average_value_text: ComputedField = lambda skin: {
+        CardMode.STUDY: skin.study_daily_average_value_text,
+        CardMode.VOICE: skin.voice_daily_average_value_text,
+        CardMode.TEXT: skin.text_daily_average_value_text,
+        CardMode.ANKI: skin.anki_daily_average_value_text,
+    }[skin.mode]
     days_active_key_text: LazyStringField = _p(
         'ui:monthlystats|stats:days_active|key',
         "Days Active:"
