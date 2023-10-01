@@ -35,7 +35,6 @@ class LeaderboardEntry:
         self.time = time
 
         self.name = name
-        self.name = ''.join(i if ord(i) < 128 or i == '∞' else '*' for i in self.name)
 
         self.avatar_key = avatar_key
 
