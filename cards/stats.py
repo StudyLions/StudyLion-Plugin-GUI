@@ -35,17 +35,6 @@ def format_lb(pos):
     return f"{pos}TH"
 
 
-def format_time(seconds):
-    return "{:02}:{:02}".format(
-        int(seconds // 3600),
-        int(seconds % 3600 // 60)
-    )
-
-
-def format_xp(count):
-    return f"{count} XP"
-
-
 @fielded
 class StatsSkin(Skin):
     _env = {
@@ -275,7 +264,34 @@ class StatsSkin(Skin):
 
 
 class StatsLayout(Layout):
-    def __init__(self, skin, lb_data, time_data, workouts, streak_data, date=None, draft=False, **kwargs):
+    """
+    Parameters
+    ----------
+    skin: StatsSkin
+    lb_data: tuple[Optional[int], Optional[int]]
+        Describes the position on the activity and coin leaderboards, respectively.
+    period_activity: tuple[str, str, str, str]
+        Strings representing activity over daily, weekly, monthly, and total periods.
+    month_activity: str
+        String to display for total month activity.
+    workouts: int
+        Number of workout sessions complete (deprecated)
+    streak_data: list[tuple[int, int]]
+        List of streak day ranges.
+    date: Optional[datetime]
+        date to show for month and year
+    draft: bool
+        Whether to render the card in 'draft' mode.
+        Draws explicit bounding boxes around each section.
+    """
+    def __init__(self, skin,
+                 lb_data,
+                 period_activity,
+                 month_activity,
+                 workouts,
+                 streak_data,
+                 date=None,
+                 draft=False, **kwargs):
         self.draft = draft
 
         self.skin = skin
@@ -283,10 +299,8 @@ class StatsLayout(Layout):
         self.data_lb_time = lb_data[0]  # Position on time leaderboard, or None
         self.data_lb_lc = lb_data[1]  # Position on coin leaderboard, or None
 
-        self.data_time_daily = int(time_data[0])  # Daily time in seconds
-        self.data_time_weekly = int(time_data[1])  # Weekly time in seconds
-        self.data_time_monthly = int(time_data[2])  # Monthly time in seconds
-        self.data_time_all = int(time_data[3])  # All time in seconds
+        self.data_time: tuple[str, str, str, str] = period_activity
+        self.data_month: str = month_activity
 
         self.data_workouts = workouts  # Number of workout sessions
         self.data_streaks = streak_data  # List of streak day ranges to show
@@ -392,17 +406,9 @@ class StatsLayout(Layout):
         )
         position += self.skin.col2_subheader_height + self.skin.stats_text_gap
 
-        if self.skin.mode in (CardMode.VOICE, CardMode.STUDY):
-            formatter = format_time
-        elif self.skin.mode is CardMode.TEXT:
-            formatter = format_xp
-        else:
-            # TODO: ANKI
-            formatter = format_xp
-
         draw.text(
             (0, position),
-            f'{self.skin.stats_text_daily}: {formatter(self.data_time_daily)}',
+            f'{self.skin.stats_text_daily}: {self.data_time[0]}',
             font=self.skin.stats_text_font,
             fill=self.skin.stats_text_colour
         )
@@ -410,7 +416,7 @@ class StatsLayout(Layout):
 
         draw.text(
             (0, position),
-            f'{self.skin.stats_text_weekly}: {formatter(self.data_time_weekly)}',
+            f'{self.skin.stats_text_weekly}: {self.data_time[1]}',
             font=self.skin.stats_text_font,
             fill=self.skin.stats_text_colour
         )
@@ -418,7 +424,7 @@ class StatsLayout(Layout):
 
         draw.text(
             (0, position),
-            f'{self.skin.stats_text_monthly}: {formatter(self.data_time_monthly)}',
+            f'{self.skin.stats_text_monthly}: {self.data_time[2]}',
             font=self.skin.stats_text_font,
             fill=self.skin.stats_text_colour
         )
@@ -426,7 +432,7 @@ class StatsLayout(Layout):
 
         draw.text(
             (0, position),
-            f'{self.skin.stats_text_alltime}: {formatter(self.data_time_all)}',
+            f'{self.skin.stats_text_alltime}: {self.data_time[3]}',
             font=self.skin.stats_text_font,
             fill=self.skin.stats_text_colour
         )
@@ -436,22 +442,23 @@ class StatsLayout(Layout):
 
         position += self.skin.stats_subheader_pregap
         # Workouts
-        workout_text = f"{self.skin.stats_subheader_workouts}: "
-        draw.text(
-            (0, position),
-            workout_text,
-            font=self.skin.stats_subheader_font,
-            fill=self.skin.stats_subheader_colour,
-            anchor='lm'
-        )
-        xposition = self.skin.stats_subheader_font.getlength(workout_text)
-        draw.text(
-            (xposition, position),
-            str(self.data_workouts),
-            font=self.skin.stats_text_font,
-            fill=self.skin.stats_subheader_colour,
-            anchor='lm'
-        )
+        # Hidden as a deactivated feature
+        # workout_text = f"{self.skin.stats_subheader_workouts}: "
+        # draw.text(
+        #     (0, position),
+        #     workout_text,
+        #     font=self.skin.stats_subheader_font,
+        #     fill=self.skin.stats_subheader_colour,
+        #     anchor='lm'
+        # )
+        # xposition = self.skin.stats_subheader_font.getlength(workout_text)
+        # draw.text(
+        #     (xposition, position),
+        #     str(self.data_workouts),
+        #     font=self.skin.stats_text_font,
+        #     fill=self.skin.stats_subheader_colour,
+        #     anchor='lm'
+        # )
 
         return col1
 
@@ -484,14 +491,9 @@ class StatsLayout(Layout):
             fill=self.skin.col2_date_colour
         )
         xposition = self.skin.col2_date_font.getlength(month_text)
-        if self.skin.mode in (CardMode.STUDY, CardMode.VOICE):
-            hours_month = self.data_time_monthly // 3600
-        else:
-            hours_month = self.data_time_monthly
-        hours_text = self.skin.col2_hours_text.format(amount=hours_month)
         draw.text(
             (xposition, position),
-            hours_text,
+            self.data_month,
             font=self.skin.col2_date_font,
             fill=self.skin.col2_hours_colour
         )
@@ -645,7 +647,13 @@ class StatsCard(Card):
     async def sample_args(cls, ctx, **kwargs):
         return {
             'lb_data': (21, 123),
-            'time_data': (3600, 5 * 24 * 3600, 1.5 * 24 * 3600, 100 * 24 * 3600),
+            'period_activity': (
+                "01:00",
+                "10:00"
+                "36:25",
+                "57:30"
+            ),
+            'month_activity': "36 hours",
             'workouts': 50,
             'streak_data': [(1, 3), (7, 8), (10, 10), (12, 16), (18, 25), (27, 31)],
             'date': datetime(2022, 2, 1)
