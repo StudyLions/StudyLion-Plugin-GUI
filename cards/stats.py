@@ -641,7 +641,10 @@ class StatsCard(Card):
     layout = StatsLayout
     skin = StatsSkin
 
-    display_name = "User Stats"
+    display_name = _p(
+        'card:stats|display_name',
+        "User Stats"
+    )
 
     @classmethod
     async def sample_args(cls, ctx, **kwargs):

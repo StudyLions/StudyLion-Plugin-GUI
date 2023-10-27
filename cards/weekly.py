@@ -834,7 +834,10 @@ class WeeklyStatsCard(Card):
     layout = WeeklyStatsPage
     skin = WeeklyStatsSkin
 
-    display_name = "Weekly Stats"
+    display_name = _p(
+        'card:weekly_stats|display_name',
+        "Weekly Stats"
+    )
 
     @classmethod
     async def sample_args(cls, ctx, **kwargs):

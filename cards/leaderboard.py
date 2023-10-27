@@ -550,7 +550,10 @@ class LeaderboardCard(Card):
     layout = LeaderboardPage
     skin = LeaderboardSkin
 
-    display_name = "Leaderboard"
+    display_name = _p(
+        'card:leaderboard|display_name',
+        "Leaderboard"
+    )
 
     @classmethod
     async def card_route(cls, runner, args, kwargs):

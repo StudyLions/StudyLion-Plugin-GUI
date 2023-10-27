@@ -421,7 +421,10 @@ class FocusTimerCard(_TimerCard):
     card_id = 'focus_timer'
 
     skin = FocusTimerSkin
-    display_name = "Focus Timer"
+    display_name = _p(
+        'card:focus_timer|display_name',
+        "Focus Timer"
+    )
 
     @classmethod
     async def sample_args(cls, ctx, **kwargs):
@@ -448,7 +451,10 @@ class BreakTimerCard(_TimerCard):
     card_id = 'break_timer'
 
     skin = BreakTimerSkin
-    display_name = "Break Timer"
+    display_name = _p(
+        'card:break_timer|display_name',
+        "Break Timer"
+    )
 
     @classmethod
     async def sample_args(cls, ctx, **kwargs):

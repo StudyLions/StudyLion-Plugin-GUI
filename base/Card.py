@@ -1,9 +1,10 @@
+from typing import Type
 import os
 import gc
 from contextlib import closing
 import logging
 
-from babel.translator import ctx_locale
+from babel.translator import ctx_locale, LazyStr
 
 from ..utils import image_as_file
 from ..client import request
@@ -24,7 +25,9 @@ class Card:
     layout: Layout = None
 
     # Skin describing the card fields, environment variables, and default values
-    skin: Skin = None
+    skin: Type[Skin] = None
+
+    display_name: LazyStr
 
     # Abstract base class for a drawable Card
 

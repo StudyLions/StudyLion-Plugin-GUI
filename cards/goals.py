@@ -809,7 +809,10 @@ class WeeklyGoalCard(_GoalCard):
 
     skin = WeeklyGoalSkin
 
-    display_name = "Weekly Goals"
+    display_name = _p(
+        'card:weekly_goals|display_name',
+        "Weekly Goals"
+    )
 
     @classmethod
     async def sample_args(cls, ctx, **kwargs):
@@ -843,7 +846,10 @@ class MonthlyGoalCard(_GoalCard):
 
     skin = MonthlyGoalSkin
 
-    display_name = "Monthly Goals"
+    display_name = _p(
+        'card:monthly_goals|display_name',
+        "Monthly Goals"
+    )
 
     @classmethod
     async def sample_args(cls, ctx, **kwargs):

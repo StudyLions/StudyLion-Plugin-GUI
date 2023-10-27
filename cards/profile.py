@@ -603,7 +603,10 @@ class ProfileCard(Card):
     layout = ProfileLayout
     skin = ProfileSkin
 
-    display_name = "User Profile"
+    display_name = _p(
+        'card:profile_card|display_name',
+        "User Profile"
+    )
 
     @classmethod
     async def card_route(cls, runner, args, kwargs):

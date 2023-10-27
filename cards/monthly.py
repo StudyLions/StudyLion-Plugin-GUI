@@ -895,7 +895,10 @@ class MonthlyStatsCard(Card):
     layout = MonthlyStatsPage
     skin = MonthlyStatsSkin
 
-    display_name = "Monthly Stats"
+    display_name = _p(
+        'card:monthly_stats|display_name',
+        "Monthly Stats"
+    )
 
     @classmethod
     async def sample_args(cls, ctx, **kwargs):
