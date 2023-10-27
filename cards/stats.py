@@ -649,9 +649,9 @@ class StatsCard(Card):
             'lb_data': (21, 123),
             'period_activity': (
                 "01:00",
-                "10:00"
+                "10:00",
                 "36:25",
-                "57:30"
+                "57:30",
             ),
             'month_activity': "36 hours",
             'workouts': 50,

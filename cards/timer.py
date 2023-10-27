@@ -432,7 +432,7 @@ class FocusTimerCard(_TimerCard):
             'remaining': 1658,
             'duration': 3000,
             'users': [
-                (get_avatar_key(ctx.client, ctx.author.id), 7055, "SkinShop"),
+                (get_avatar_key(ctx.client, ctx.author.id) if ctx else (0, None), 7055, "SkinShop"),
                 ((0, None), 6543, "Never"),
                 ((0, None), 5432, "Going"),
                 ((0, None), 4321, "To"),
@@ -459,7 +459,7 @@ class BreakTimerCard(_TimerCard):
             'remaining': 1658,
             'duration': 3000,
             'users': [
-                (get_avatar_key(ctx.client, ctx.author.id), 7055, "SkinShop"),
+                (get_avatar_key(ctx.client, ctx.author.id) if ctx else (0, None), 7055, "SkinShop"),
                 ((0, None), 6543, "Never"),
                 ((0, None), 5432, "Going"),
                 ((0, None), 4321, "To"),
